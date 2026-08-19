@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1">
+
+  <title>School Attendance Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 18px;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      width: 100%;
+      margin: auto;
+    }
+
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 20px;
+      font-weight: bold;
+      min-height: 60px;
+    }
+
+    .waiting {
+      background: #f3f4f6;
+      color: #555;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <div class="container">
+
+    <h1>🏫 School Attendance</h1>
+
+    <div class="subtitle">
+      扫描学生卡<br>
+      <b>Imbas Kad Murid</b>
+    </div>
+
+
+    <div id="reader"></div>
+
+
+    <div
+      id="result"
+      class="waiting">
+
+      📷 等待扫描...<br>
+      Menunggu imbasan...
+
+    </div>
+
+  </div>
+
+
+<script>
+
+let scanner = null;
+
+let lastBarcode = "";
+
+let lastScanTime = 0;
+
+
+function showResult(
+  message,
+  type
+) {
+
+  const result =
+    document.getElementById("result");
+
+  result.className = type;
+
+  result.innerHTML = message;
+
+}
+
+
+function startScanner() {
+
+  scanner =
+    new Html5Qrcode("reader");
+
+
+  const config = {
+
+    fps: 10,
+
+    qrbox: {
+      width: 300,
+      height: 150
+    },
+
+    rememberLastUsedCamera: true,
+
+    showTorchButtonIfSupported: true,
+
+    showZoomSliderIfSupported: true
+
+  };
+
+
+  Html5Qrcode
+    .getCameras()
+
+    .then(function(cameras) {
+
+
+      if (
+        !cameras ||
+        cameras.length === 0
+      ) {
+
+        showResult(
+          "❌ 找不到相机<br>" +
+          "Tiada kamera dijumpai",
+          "error"
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * 优先选择后置相机
+       */
+
+      let camera =
+        cameras.find(
+          function(camera) {
+
+            const label =
+              camera.label
+                .toLowerCase();
+
+            return (
+              label.includes("back") ||
+              label.includes("rear") ||
+              label.includes("environment")
+            );
+
+          }
+        );
+
+
+      /*
+       * 如果找不到后置，
+       * 就使用第一台相机
+       */
+
+      if (!camera) {
+
+        camera =
+          cameras[0];
+
+      }
+
+
+      scanner.start(
+
+        camera.id,
+
+        config,
+
+        function(decodedText) {
+
+          handleBarcode(
+            decodedText
+          );
+
+        },
+
+        function(errorMessage) {
+
+          /*
+           * 正常扫描失败
+           * 不显示错误
+           */
+
+        }
+
+      );
+
+    })
+
+    .catch(function(error) {
+
+      console.error(error);
+
+      showResult(
+        "❌ 无法开启相机<br>" +
+        "Tidak dapat membuka kamera<br><br>" +
+        error,
+        "error"
+      );
+
+    });
+
+}
+
+
+function handleBarcode(
+  barcode
+) {
+
+  const now =
+    Date.now();
+
+
+  /*
+   * 防止同一个学生
+   * 连续扫描多次
+   */
+
+  if (
+
+    barcode === lastBarcode &&
+
+    now - lastScanTime < 3000
+
+  ) {
+
+    return;
+
+  }
+
+
+  lastBarcode =
+    barcode;
+
+  lastScanTime =
+    now;
+
+
+  showResult(
+
+    "✅ 扫描成功<br>" +
+    "Imbasan berjaya<br><br>" +
+    "Barcode: <strong>" +
+    barcode +
+    "</strong>",
+
+    "success"
+
+  );
+
+
+  console.log(
+    "Barcode:",
+    barcode
+  );
+
+}
+
+
+startScanner();
+
+</script>
+
+</body>
+
+</html>
