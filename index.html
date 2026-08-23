@@ -873,7 +873,41 @@ try {
     "ATTENDANCE:",
     attendanceResult
   );
+if (
+  attendanceResult.success
+) {
 
+  if (
+    attendanceResult.status === "Present"
+  ) {
+
+    showResult(
+
+      "✅ 出席成功<br>" +
+      "Present<br>" +
+      "Hadir",
+
+      "success"
+
+    );
+
+  } else if (
+    attendanceResult.status === "Late"
+  ) {
+
+    showResult(
+
+      "🔴 迟到<br>" +
+      "Late<br>" +
+      "Lewat",
+
+      "error"
+
+    );
+
+  }
+
+}
 }
 catch (error) {
 
