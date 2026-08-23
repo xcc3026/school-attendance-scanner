@@ -754,12 +754,13 @@ async function handleQR(qrCode) {
     return;
   }
 
-  if (
-    qrCode === lastCode &&
-    now - lastScanTime < 3000
-  ) {
-    return;
-  }
+ if (
+  qrCode === lastCode
+) {
+
+  return;
+
+}
 
   isProcessing = true;
 
