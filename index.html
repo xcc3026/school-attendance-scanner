@@ -937,6 +937,38 @@ async function handleQR(qrCode) {
 
 
      else if (
+if (
+  attendanceResult.status ===
+  "Present"
+) {
+
+  showResult(
+
+    "<div class='student-name-c'>" +
+      student.FullNameC +
+    "</div>" +
+
+    "<br>" +
+
+    "<div>" +
+      "🟢 出席成功" +
+    "</div>" +
+
+    "<div>" +
+      "Present · Hadir" +
+    "</div>",
+
+    "success"
+
+  );
+
+  speak(
+    "Present. Hadir."
+  );
+
+}
+
+else if (
   attendanceResult.status ===
   "Late"
 ) {
@@ -960,7 +992,6 @@ async function handleQR(qrCode) {
     "error"
 
   );
-
 
   speak(
     "Late. Lewat."
