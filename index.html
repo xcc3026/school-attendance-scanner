@@ -936,42 +936,37 @@ async function handleQR(qrCode) {
       }
 
 
-      else if (
-        attendanceResult.status ===
-        "Late"
-      ) {
+     else if (
+  attendanceResult.status ===
+  "Late"
+) {
 
-        showResult(
+  showResult(
 
-"<div class='student-name-c'>" +
-  student.FullNameC +
-"</div>" +
+    "<div class='student-name-c'>" +
+      student.FullNameC +
+    "</div>" +
 
-"<br>" +
-          "</div>" +
+    "<br>" +
 
-          "<br>" +
+    "<div>" +
+      "🔴 迟到" +
+    "</div>" +
 
-          "<div>" +
-            "🔴 迟到" +
-          "</div>" +
+    "<div>" +
+      "Late · Lewat" +
+    "</div>",
 
-          "<div>" +
-            "Late · Lewat" +
-          "</div>",
+    "error"
 
-          "error"
-
-        );
+  );
 
 
-        speak(
-          "Late. Lewat."
-        );
+  speak(
+    "Late. Lewat."
+  );
 
-      }
-
-    }
+}
 
 
     /*
