@@ -49,6 +49,17 @@
       margin: auto;
     }
 
+    .camera-button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
     #result {
       margin-top: 20px;
       padding: 20px;
@@ -100,6 +111,15 @@
 
     <div id="reader"></div>
 
+    <button
+      class="camera-button"
+      onclick="switchCamera()">
+
+      🔄 切换相机<br>
+      Tukar Kamera
+
+    </button>
+
     <div
       id="result"
       class="waiting">
@@ -115,6 +135,10 @@
 <script>
 
 let scanner = null;
+
+let cameras = [];
+
+let currentCameraIndex = 0;
 
 let lastCode = "";
 
@@ -143,7 +167,7 @@ function showResult(
 
 
 /*
- * 语音
+ * 英文语音
  */
 
 function speak(
@@ -175,14 +199,12 @@ function speak(
 
 
 /*
- * 开始 Scanner
+ * 启动指定相机
  */
 
-function startScanner() {
-
-  scanner =
-    new Html5Qrcode("reader");
-
+function startCamera(
+  cameraId
+) {
 
   const config = {
 
@@ -202,21 +224,76 @@ function startScanner() {
   };
 
 
+  scanner.start(
+
+    cameraId,
+
+    config,
+
+    function(decodedText) {
+
+      handleQR(
+        decodedText
+      );
+
+    },
+
+    function(errorMessage) {
+
+      /*
+       * 正常扫描失败
+       * 不显示错误
+       */
+
+    }
+
+  )
+
+  .catch(function(error) {
+
+    console.error(error);
+
+    showResult(
+
+      "❌ 无法开启相机<br>" +
+      "Tidak dapat membuka kamera",
+
+      "error"
+
+    );
+
+  });
+
+}
+
+
+/*
+ * 开始 Scanner
+ */
+
+function startScanner() {
+
+  scanner =
+    new Html5Qrcode("reader");
+
+
   Html5Qrcode
     .getCameras()
 
-    .then(function(cameras) {
-
+    .then(function(cameraList) {
 
       if (
-        !cameras ||
-        cameras.length === 0
+        !cameraList ||
+        cameraList.length === 0
       ) {
 
         showResult(
+
           "❌ 找不到相机<br>" +
           "Tiada kamera dijumpai",
+
           "error"
+
         );
 
         return;
@@ -224,12 +301,16 @@ function startScanner() {
       }
 
 
+      cameras =
+        cameraList;
+
+
       /*
-       * 优先选择后置相机
+       * 优先选择后置镜头
        */
 
-      let camera =
-        cameras.find(
+      const backCameraIndex =
+        cameras.findIndex(
           function(camera) {
 
             const label =
@@ -248,36 +329,21 @@ function startScanner() {
         );
 
 
-      if (!camera) {
+      if (
+        backCameraIndex !== -1
+      ) {
 
-        camera =
-          cameras[0];
+        currentCameraIndex =
+          backCameraIndex;
 
       }
 
 
-      scanner.start(
+      startCamera(
 
-        camera.id,
-
-        config,
-
-        function(decodedText) {
-
-          handleQR(
-            decodedText
-          );
-
-        },
-
-        function(errorMessage) {
-
-          /*
-           * 正常扫描失败
-           * 不显示错误
-           */
-
-        }
+        cameras[
+          currentCameraIndex
+        ].id
 
       );
 
@@ -289,12 +355,74 @@ function startScanner() {
 
       showResult(
 
-        "❌ 无法开启相机<br>" +
-        "Tidak dapat membuka kamera<br><br>" +
-        error,
+        "❌ 无法获取相机<br>" +
+        "Tidak dapat mendapatkan kamera",
 
         "error"
 
+      );
+
+    });
+
+}
+
+
+/*
+ * 切换相机
+ */
+
+function switchCamera() {
+
+  if (
+    cameras.length < 2
+  ) {
+
+    showResult(
+
+      "⚠️ 此设备只有一个相机",
+
+      "error"
+
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * 停止目前相机
+   */
+
+  scanner.stop()
+
+    .then(function() {
+
+      /*
+       * 切换到下一台相机
+       */
+
+      currentCameraIndex =
+        (
+          currentCameraIndex + 1
+        ) %
+        cameras.length;
+
+
+      startCamera(
+
+        cameras[
+          currentCameraIndex
+        ].id
+
+      );
+
+    })
+
+    .catch(function(error) {
+
+      console.error(
+        error
       );
 
     });
@@ -314,12 +442,9 @@ function handleQR(
     Date.now();
 
 
-  /*
-   * 正在处理时，
-   * 不接受新的扫描
-   */
-
-  if (isProcessing) {
+  if (
+    isProcessing
+  ) {
 
     return;
 
@@ -369,10 +494,6 @@ function handleQR(
   );
 
 
-  /*
-   * 英文语音
-   */
-
   speak(
 
     "Good morning! " +
@@ -388,7 +509,7 @@ function handleQR(
 
 
   /*
-   * 2 秒后准备扫描下一位
+   * 2 秒后继续扫描下一位
    */
 
   setTimeout(
