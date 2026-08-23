@@ -868,48 +868,23 @@ async function handleQR(qrCode) {
 
       showResult(
 
-        "<div class='student-name-c'>" +
-          student.FullNameC +
-        "</div>" +
+"<div class='student-name-c'>" +
+  student.FullNameC +
+"</div>" +
 
-        "<div class='student-name'>" +
-          student.FullName +
-        "</div>" +
+"<br>" +
 
-        "<div class='student-info'>" +
-          "🏫 Class: " +
-          student.Class +
-        "</div>" +
+"<div>" +
+  "⚠️ 今天已经点名" +
+"</div>" +
 
-        "<div class='student-info'>" +
-          "🍱 RMT: " +
-          (
-            String(student.RMT)
-              .toUpperCase() === "YES"
-              ? "YES"
-              : "NO"
-          ) +
-        "</div>" +
+"<div>" +
+  "Already checked in" +
+"</div>" +
 
-        "<br>" +
-
-        "<div>" +
-          "⚠️ 今天已经点名" +
-        "</div>" +
-
-        "<div>" +
-          "Already checked in" +
-        "</div>" +
-
-        "<div>" +
-          "Sudah hadir" +
-        "</div>",
-
-        "error"
-
-      );
-
-    }
+"<div>" +
+  "Sudah hadir" +
+"</div>",
 
 
     /*
