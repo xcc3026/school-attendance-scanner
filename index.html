@@ -853,9 +853,11 @@ async function handleQR(
    * 找到学生
    */
 
-  const student =
-  result.student.student || result.student;
+  let student = result.student;
 
+if (student && student.student) {
+  student = student.student;
+}
 
   showStudent(
     student
