@@ -699,8 +699,6 @@ function showStudent(
 
   console.log("STUDENT:", student);
   
-    alert(JSON.stringify(student));
-  
   const rmtText =
     String(student.RMT)
       .toUpperCase() === "YES"
@@ -750,155 +748,153 @@ function showStudent(
  * ================================
  */
 
-async function handleQR(
-  qrCode
-) {
+async function handleQR(qrCode) {
 
-  const now =
-    Date.now();
+  const now = Date.now();
 
-
-  if (
-    isProcessing
-  ) {
-
+  if (isProcessing) {
     return;
-
   }
 
-
   if (
-
     qrCode === lastCode &&
-
     now - lastScanTime < 3000
-
   ) {
-
     return;
-
   }
 
+  isProcessing = true;
 
-  isProcessing =
-    true;
-
-  lastCode =
-    qrCode;
-
-  lastScanTime =
-    now;
-
-
-  /*
-   * 先显示查询中
-   */
+  lastCode = qrCode;
+  lastScanTime = now;
 
   showResult(
-
     "🔍 查询学生资料...<br>" +
     "Mencari maklumat murid...",
-
     "waiting"
-
   );
 
+  try {
 
-  /*
-   * 查询 Google Sheet
-   */
+    const result =
+      await getStudent(qrCode.trim());
 
-  const result =
-    await getStudent(
-      qrCode
+    console.log(
+      "API RESULT:",
+      JSON.stringify(result)
     );
 
+    /*
+     * 检查 API 是否成功
+     */
+    if (
+      !result ||
+      result.success !== true
+    ) {
 
-  /*
-   * 找不到学生
-   */
+      showResult(
+        "❌ 找不到学生<br>" +
+        "Murid tidak dijumpai<br><br>" +
+        "<div class='qr-number'>" +
+        qrCode +
+        "</div>",
+        "error"
+      );
 
-  if (
-    !result.success
-  ) {
+      return;
+    }
+
+    /*
+     * 取得学生资料
+     *
+     * API 目前是：
+     * result.student.student
+     */
+
+    let student = result.student;
+
+    if (
+      student &&
+      student.student
+    ) {
+
+      student =
+        student.student;
+
+    }
+
+    /*
+     * 确认学生资料存在
+     */
+
+    if (
+      !student ||
+      !student.StudentID
+    ) {
+
+      showResult(
+        "❌ 学生资料错误<br>" +
+        "Maklumat murid tidak sah",
+        "error"
+      );
+
+      return;
+    }
+
+    /*
+     * 显示学生资料
+     */
+
+    showStudent(
+      student
+    );
+
+    /*
+     * 播放三语短句
+     */
+
+    speakGreeting();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "QR ERROR:",
+      error
+    );
 
     showResult(
-
-      "❌ 找不到学生<br>" +
-      "Murid tidak dijumpai<br><br>" +
-
-      "<div class='qr-number'>" +
-      qrCode +
-      "</div>",
-
+      "❌ 系统错误<br>" +
+      "Ralat sistem",
       "error"
-
     );
 
+  }
+
+  finally {
+
+    /*
+     * 2 秒后准备下一位
+     */
 
     setTimeout(
       function() {
+
+        showResult(
+          "📷 等待下一位学生...<br>" +
+          "Menunggu murid seterusnya...",
+          "waiting"
+        );
 
         isProcessing =
           false;
 
       },
-      1500
+      2000
     );
 
-
-    return;
-
   }
-
-
-  /*
-   * 找到学生
-   */
-
-  let student = result.student;
-
-if (student && student.student) {
-  student = student.student;
-}
-
-  showStudent(
-    student
-  );
-
-
-  /*
-   * 播放三语短句
-   */
-
-  speakGreeting();
-
-
-  /*
-   * 2 秒后准备下一位
-   */
-
-  setTimeout(
-
-    function() {
-
-      showResult(
-
-        "📷 等待下一位学生...<br>" +
-        "Menunggu murid seterusnya...",
-
-        "waiting"
-
-      );
-
-      isProcessing =
-        false;
-
-    },
-
-    2000
-
-  );
 
 }
 
