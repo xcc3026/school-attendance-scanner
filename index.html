@@ -878,20 +878,26 @@ async function handleQR(qrCode) {
      */
 
     setTimeout(
-      function() {
 
-        showResult(
-          "📷 等待下一位学生...<br>" +
-          "Menunggu murid seterusnya...",
-          "waiting"
-        );
+  function() {
 
-        isProcessing =
-          false;
+    showResult(
 
-      },
-      2000
+      "📷 等待下一位学生...<br>" +
+      "Menunggu murid seterusnya...",
+
+      "waiting"
+
     );
+
+    isProcessing =
+      false;
+
+  },
+
+  2000
+
+);
 
   }
 
