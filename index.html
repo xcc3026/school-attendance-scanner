@@ -745,27 +745,25 @@ function showStudent(
  * QR 扫描成功
  * ================================
  */
-
 async function handleQR(qrCode) {
-
-  const now = Date.now();
 
   if (isProcessing) {
     return;
   }
 
- if (
-  qrCode === lastCode
-) {
-
-  return;
-
-}
+  if (qrCode === lastCode) {
+    return;
+  }
 
   isProcessing = true;
 
   lastCode = qrCode;
-  lastScanTime = now;
+  lastScanTime = Date.now();
+
+
+  /*
+   * 查询学生
+   */
 
   showResult(
     "🔍 查询学生资料...<br>" +
@@ -773,44 +771,54 @@ async function handleQR(qrCode) {
     "waiting"
   );
 
+
   try {
 
     const result =
-      await getStudent(qrCode.trim());
+      await getStudent(
+        qrCode.trim()
+      );
+
 
     console.log(
       "API RESULT:",
       JSON.stringify(result)
     );
 
+
     /*
-     * 检查 API 是否成功
+     * 学生不存在
      */
+
     if (
       !result ||
       result.success !== true
     ) {
 
       showResult(
+
         "❌ 找不到学生<br>" +
         "Murid tidak dijumpai<br><br>" +
+
         "<div class='qr-number'>" +
         qrCode +
         "</div>",
+
         "error"
+
       );
 
       return;
     }
 
+
     /*
      * 取得学生资料
-     *
-     * API 目前是：
-     * result.student.student
      */
 
-    let student = result.student;
+    let student =
+      result.student;
+
 
     if (
       student &&
@@ -822,9 +830,6 @@ async function handleQR(qrCode) {
 
     }
 
-    /*
-     * 确认学生资料存在
-     */
 
     if (
       !student ||
@@ -832,168 +837,244 @@ async function handleQR(qrCode) {
     ) {
 
       showResult(
+
         "❌ 学生资料错误<br>" +
         "Maklumat murid tidak sah",
+
         "error"
+
       );
 
       return;
     }
 
-    /*
-     * 显示学生资料
-     */
 
-    showStudent(
+    console.log(
+      "STUDENT:",
       student
     );
+
+
     /*
- * 自动记录 Attendance
- */
+     * ================================
+     * 记录 Attendance
+     * ================================
+     */
 
-const attendanceUrl =
-  API_URL +
-  "?action=attendance" +
-  "&studentID=" +
-  encodeURIComponent(
-    student.StudentID
-  );
+    const attendanceUrl =
+      API_URL +
+      "?action=attendance" +
+      "&studentID=" +
+      encodeURIComponent(
+        student.StudentID
+      );
 
-try {
 
-  const attendanceResponse =
-    await fetch(
-      attendanceUrl
+    const attendanceResponse =
+      await fetch(
+        attendanceUrl
+      );
+
+
+    const attendanceResult =
+      await attendanceResponse.json();
+
+
+    console.log(
+      "ATTENDANCE RESULT:",
+      attendanceResult
     );
 
-  const attendanceResult =
-    await attendanceResponse.json();
 
-  console.log(
-    "ATTENDANCE:",
-    attendanceResult
-  );
-if (
-  attendanceResult.success
-) {
+    /*
+     * ================================
+     * 今天已经签到
+     * ================================
+     */
 
-  let attendanceMessage = "";
+    if (
+      attendanceResult.success === false &&
+      attendanceResult.message ===
+      "Student has already checked in today."
+    ) {
 
-  let attendanceType = "success";
+      showResult(
+
+        "<div class='student-name-c'>" +
+          student.FullNameC +
+        "</div>" +
+
+        "<div class='student-name'>" +
+          student.FullName +
+        "</div>" +
+
+        "<div class='student-info'>" +
+          "🏫 Class: " +
+          student.Class +
+        "</div>" +
+
+        "<div class='student-info'>" +
+          "🍱 RMT: " +
+          (
+            String(student.RMT)
+              .toUpperCase() === "YES"
+              ? "YES"
+              : "NO"
+          ) +
+        "</div>" +
+
+        "<br>" +
+
+        "<div>" +
+          "⚠️ 今天已经点名" +
+        "</div>" +
+
+        "<div>" +
+          "Already checked in" +
+        "</div>" +
+
+        "<div>" +
+          "Sudah hadir" +
+        "</div>",
+
+        "error"
+
+      );
+
+    }
 
 
-  if (
-    attendanceResult.status === "Present"
-  ) {
+    /*
+     * ================================
+     * 新的 Attendance
+     * ================================
+     */
 
-    attendanceMessage =
-      "🟢 出席成功<br>" +
-      "Present · Hadir";
+    else if (
+      attendanceResult.success === true
+    ) {
 
-  }
-
-  else if (
-    attendanceResult.status === "Late"
-  ) {
-
-    attendanceMessage =
-      "🔴 迟到<br>" +
-      "Late · Lewat";
-
-    attendanceType =
-      "error";
-
-  }
-else if (
-  attendanceResult.message ===
-  "Student has already checked in today."
-) {
-
-  showResult(
-
-    "<div class='student-name-c'>" +
-      student.FullNameC +
-    "</div>" +
-
-    "<div class='student-name'>" +
-      student.FullName +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🏫 Class: " +
-      student.Class +
-    "</div>" +
-
-    "<br>" +
-
-    "<div>" +
-      "⚠️ 今天已经点名" +
-    "</div>" +
-
-    "<div>" +
-      "Already checked in" +
-    "</div>" +
-
-    "<div>" +
-      "Sudah hadir" +
-    "</div>",
-
-    "error"
-
-  );
-
-}
-
-  showResult(
-
-    "<div class='student-name-c'>" +
-      student.FullNameC +
-    "</div>" +
-
-    "<div class='student-name'>" +
-      student.FullName +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🏫 Class: " +
-      student.Class +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🍱 RMT: " +
-      (
+      const rmtText =
         String(student.RMT)
           .toUpperCase() === "YES"
           ? "YES"
-          : "NO"
-      ) +
-    "</div>" +
+          : "NO";
 
-    "<br>" +
 
-    "<div>" +
-      attendanceMessage +
-    "</div>",
+      if (
+        attendanceResult.status ===
+        "Present"
+      ) {
 
-    attendanceType
+        showResult(
 
-  );
+          "<div class='student-name-c'>" +
+            student.FullNameC +
+          "</div>" +
 
-}
-catch (error) {
+          "<div class='student-name'>" +
+            student.FullName +
+          "</div>" +
 
-  console.error(
-    "Attendance Error:",
-    error
-  );
+          "<div class='student-info'>" +
+            "🏫 Class: " +
+            student.Class +
+          "</div>" +
 
-}
+          "<div class='student-info'>" +
+            "🍱 RMT: " +
+            rmtText +
+          "</div>" +
+
+          "<br>" +
+
+          "<div>" +
+            "🟢 出席成功" +
+          "</div>" +
+
+          "<div>" +
+            "Present · Hadir" +
+          "</div>",
+
+          "success"
+
+        );
+
+
+        speak(
+          "Present. Hadir."
+        );
+
+      }
+
+
+      else if (
+        attendanceResult.status ===
+        "Late"
+      ) {
+
+        showResult(
+
+          "<div class='student-name-c'>" +
+            student.FullNameC +
+          "</div>" +
+
+          "<div class='student-name'>" +
+            student.FullName +
+          "</div>" +
+
+          "<div class='student-info'>" +
+            "🏫 Class: " +
+            student.Class +
+          "</div>" +
+
+          "<div class='student-info'>" +
+            "🍱 RMT: " +
+            rmtText +
+          "</div>" +
+
+          "<br>" +
+
+          "<div>" +
+            "🔴 迟到" +
+          "</div>" +
+
+          "<div>" +
+            "Late · Lewat" +
+          "</div>",
+
+          "error"
+
+        );
+
+
+        speak(
+          "Late. Lewat."
+        );
+
+      }
+
+    }
+
 
     /*
-     * 播放三语短句
+     * 其他 Attendance 错误
      */
 
-    speakGreeting();
+    else {
+
+      showResult(
+
+        "❌ 出席记录失败<br>" +
+        "Attendance failed<br>" +
+        "Rekod kehadiran gagal",
+
+        "error"
+
+      );
+
+    }
+
 
   }
 
@@ -1004,138 +1085,46 @@ catch (error) {
       error
     );
 
+
     showResult(
+
       "❌ 系统错误<br>" +
       "Ralat sistem",
+
       "error"
+
     );
 
   }
 
-  finally {
 
-    /*
-     * 2 秒后准备下一位
-     */
+  /*
+   * 2 秒后准备下一位
+   */
 
-    setTimeout(
+  setTimeout(
 
-  function() {
-
-    showResult(
-
-      "📷 等待下一位学生...<br>" +
-      "Menunggu murid seterusnya...",
-
-      "waiting"
-
-    );
-
-    isProcessing =
-      false;
-
-  },
-
-  2000
-
-);
-
-  }
-
-}
-
-
-/*
- * ================================
- * 初始化 Scanner
- * ================================
- */
-
-function startScanner() {
-
-  scanner =
-    new Html5Qrcode(
-      "reader"
-    );
-
-
-  Html5Qrcode
-    .getCameras()
-
-    .then(function(cameraList) {
-
-      cameras =
-        cameraList;
-
-
-      if (
-        cameras.length === 0
-      ) {
-
-        showResult(
-
-          "❌ 找不到相机<br>" +
-          "Tiada kamera dijumpai",
-
-          "error"
-
-        );
-
-        return;
-
-      }
-
-
-      /*
-       * 默认后置镜头
-       */
-
-      const backCamera =
-        findCamera("back");
-
-
-      if (backCamera) {
-
-        startCamera(
-          backCamera,
-          "back"
-        );
-
-      }
-
-      else {
-
-        startCamera(
-          cameras[0],
-          "front"
-        );
-
-      }
-
-    })
-
-    .catch(function(error) {
-
-      console.error(error);
+    function() {
 
       showResult(
 
-        "❌ 无法获取相机<br>" +
-        "Tidak dapat mendapatkan kamera",
+        "📷 等待下一位学生...<br>" +
+        "Menunggu murid seterusnya...",
 
-        "error"
+        "waiting"
 
       );
 
-    });
+      isProcessing =
+        false;
+
+      lastCode =
+        "";
+
+    },
+
+    2000
+
+  );
 
 }
-
-
-startScanner();
-
-</script>
-
-</body>
-
-</html>
