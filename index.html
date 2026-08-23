@@ -695,42 +695,10 @@ function showStudent(
   student
 ) {
 
-  console.log("STUDENT:", student);
-  
-  const rmtText =
-    String(student.RMT)
-      .toUpperCase() === "YES"
-      ? "YES"
-      : "NO";
-
-
   showResult(
 
     "<div class='student-name-c'>" +
       student.FullNameC +
-    "</div>" +
-
-    "<div class='student-name'>" +
-      student.FullName +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🏫 Class: " +
-      student.Class +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🍱 RMT: " +
-      rmtText +
-    "</div>" +
-
-    "<div class='student-info'>" +
-      "🟢 ACTIVE" +
-    "</div>" +
-
-    "<div class='qr-number'>" +
-      "QR: " +
-      student.Barcode +
     "</div>",
 
     "success"
