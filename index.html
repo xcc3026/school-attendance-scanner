@@ -49,15 +49,24 @@
       margin: auto;
     }
 
-    .camera-button {
-      width: 100%;
+    .camera-buttons {
+      display: flex;
+      gap: 10px;
       margin-top: 15px;
-      padding: 14px;
+    }
+
+    .camera-button {
+      flex: 1;
+      padding: 14px 8px;
       border: none;
       border-radius: 12px;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+    }
+
+    .camera-button.active {
+      outline: 3px solid #333;
     }
 
     #result {
@@ -111,14 +120,32 @@
 
     <div id="reader"></div>
 
-    <button
-      class="camera-button"
-      onclick="switchCamera()">
 
-      🔄 切换相机<br>
-      Tukar Kamera
+    <div class="camera-buttons">
 
-    </button>
+      <button
+        id="backButton"
+        class="camera-button"
+        onclick="changeCamera('back')">
+
+        📷 后置镜头<br>
+        Kamera Belakang
+
+      </button>
+
+
+      <button
+        id="frontButton"
+        class="camera-button"
+        onclick="changeCamera('front')">
+
+        🤳 前置镜头<br>
+        Kamera Hadapan
+
+      </button>
+
+    </div>
+
 
     <div
       id="result"
@@ -138,13 +165,15 @@ let scanner = null;
 
 let cameras = [];
 
-let currentCameraIndex = 0;
+let currentCamera = null;
 
 let lastCode = "";
 
 let lastScanTime = 0;
 
 let isProcessing = false;
+
+let isSwitching = false;
 
 
 /*
@@ -167,7 +196,7 @@ function showResult(
 
 
 /*
- * 英文语音
+ * 语音
  */
 
 function speak(
@@ -199,11 +228,98 @@ function speak(
 
 
 /*
- * 启动指定相机
+ * 根据前置 / 后置寻找相机
+ */
+
+function findCamera(
+  type
+) {
+
+  if (type === "back") {
+
+    return cameras.find(
+      function(camera) {
+
+        const label =
+          camera.label.toLowerCase();
+
+        return (
+          label.includes("back") ||
+          label.includes("rear") ||
+          label.includes("environment")
+        );
+
+      }
+    );
+
+  }
+
+
+  if (type === "front") {
+
+    return cameras.find(
+      function(camera) {
+
+        const label =
+          camera.label.toLowerCase();
+
+        return (
+          label.includes("front") ||
+          label.includes("user")
+        );
+
+      }
+    );
+
+  }
+
+}
+
+
+/*
+ * 更新按钮
+ */
+
+function updateCameraButtons(
+  type
+) {
+
+  document
+    .getElementById("backButton")
+    .classList.remove("active");
+
+  document
+    .getElementById("frontButton")
+    .classList.remove("active");
+
+
+  if (type === "back") {
+
+    document
+      .getElementById("backButton")
+      .classList.add("active");
+
+  }
+
+
+  if (type === "front") {
+
+    document
+      .getElementById("frontButton")
+      .classList.add("active");
+
+  }
+
+}
+
+
+/*
+ * 开始指定相机
  */
 
 function startCamera(
-  cameraId
+  camera,
+  type
 ) {
 
   const config = {
@@ -226,7 +342,7 @@ function startCamera(
 
   scanner.start(
 
-    cameraId,
+    camera.id,
 
     config,
 
@@ -238,7 +354,7 @@ function startCamera(
 
     },
 
-    function(errorMessage) {
+    function() {
 
       /*
        * 正常扫描失败
@@ -249,9 +365,26 @@ function startCamera(
 
   )
 
+  .then(function() {
+
+    currentCamera =
+      type;
+
+    updateCameraButtons(
+      type
+    );
+
+    isSwitching =
+      false;
+
+  })
+
   .catch(function(error) {
 
     console.error(error);
+
+    isSwitching =
+      false;
 
     showResult(
 
@@ -268,118 +401,33 @@ function startCamera(
 
 
 /*
- * 开始 Scanner
- */
-
-function startScanner() {
-
-  scanner =
-    new Html5Qrcode("reader");
-
-
-  Html5Qrcode
-    .getCameras()
-
-    .then(function(cameraList) {
-
-      if (
-        !cameraList ||
-        cameraList.length === 0
-      ) {
-
-        showResult(
-
-          "❌ 找不到相机<br>" +
-          "Tiada kamera dijumpai",
-
-          "error"
-
-        );
-
-        return;
-
-      }
-
-
-      cameras =
-        cameraList;
-
-
-      /*
-       * 优先选择后置镜头
-       */
-
-      const backCameraIndex =
-        cameras.findIndex(
-          function(camera) {
-
-            const label =
-              camera.label
-                .toLowerCase();
-
-            return (
-
-              label.includes("back") ||
-              label.includes("rear") ||
-              label.includes("environment")
-
-            );
-
-          }
-        );
-
-
-      if (
-        backCameraIndex !== -1
-      ) {
-
-        currentCameraIndex =
-          backCameraIndex;
-
-      }
-
-
-      startCamera(
-
-        cameras[
-          currentCameraIndex
-        ].id
-
-      );
-
-    })
-
-    .catch(function(error) {
-
-      console.error(error);
-
-      showResult(
-
-        "❌ 无法获取相机<br>" +
-        "Tidak dapat mendapatkan kamera",
-
-        "error"
-
-      );
-
-    });
-
-}
-
-
-/*
  * 切换相机
  */
 
-function switchCamera() {
+function changeCamera(
+  type
+) {
 
   if (
-    cameras.length < 2
+    isSwitching ||
+    currentCamera === type
   ) {
+
+    return;
+
+  }
+
+
+  const camera =
+    findCamera(type);
+
+
+  if (!camera) {
 
     showResult(
 
-      "⚠️ 此设备只有一个相机",
+      "⚠️ 找不到此相机<br>" +
+      "Kamera tidak dijumpai",
 
       "error"
 
@@ -390,48 +438,63 @@ function switchCamera() {
   }
 
 
+  isSwitching =
+    true;
+
+
   /*
-   * 停止目前相机
+   * 停止目前 Scanner
    */
 
-  scanner.stop()
+  if (
+    scanner.isScanning
+  ) {
 
-    .then(function() {
+    scanner.stop()
 
-      /*
-       * 切换到下一台相机
-       */
+      .then(function() {
 
-      currentCameraIndex =
-        (
-          currentCameraIndex + 1
-        ) %
-        cameras.length;
+        scanner.clear()
 
+          .then(function() {
 
-      startCamera(
+            scanner =
+              new Html5Qrcode(
+                "reader"
+              );
 
-        cameras[
-          currentCameraIndex
-        ].id
+            startCamera(
+              camera,
+              type
+            );
 
-      );
+          });
 
-    })
+      })
 
-    .catch(function(error) {
+      .catch(function(error) {
 
-      console.error(
-        error
-      );
+        console.error(error);
 
-    });
+        isSwitching =
+          false;
+
+      });
+
+  } else {
+
+    startCamera(
+      camera,
+      type
+    );
+
+  }
 
 }
 
 
 /*
- * QR Code 扫描成功
+ * QR 扫描成功
  */
 
 function handleQR(
@@ -451,11 +514,6 @@ function handleQR(
   }
 
 
-  /*
-   * 防止同一个 QR
-   * 连续扫描
-   */
-
   if (
 
     qrCode === lastCode &&
@@ -469,7 +527,8 @@ function handleQR(
   }
 
 
-  isProcessing = true;
+  isProcessing =
+    true;
 
   lastCode =
     qrCode;
@@ -502,16 +561,6 @@ function handleQR(
   );
 
 
-  console.log(
-    "QR Code:",
-    qrCode
-  );
-
-
-  /*
-   * 2 秒后继续扫描下一位
-   */
-
   setTimeout(
 
     function() {
@@ -533,6 +582,88 @@ function handleQR(
     2000
 
   );
+
+}
+
+
+/*
+ * 初始化
+ */
+
+function startScanner() {
+
+  scanner =
+    new Html5Qrcode(
+      "reader"
+    );
+
+
+  Html5Qrcode
+    .getCameras()
+
+    .then(function(cameraList) {
+
+      cameras =
+        cameraList;
+
+
+      if (
+        cameras.length === 0
+      ) {
+
+        showResult(
+
+          "❌ 找不到相机",
+
+          "error"
+
+        );
+
+        return;
+
+      }
+
+
+      /*
+       * 默认后置镜头
+       */
+
+      const backCamera =
+        findCamera("back");
+
+
+      if (backCamera) {
+
+        startCamera(
+          backCamera,
+          "back"
+        );
+
+      } else {
+
+        startCamera(
+          cameras[0],
+          "front"
+        );
+
+      }
+
+    })
+
+    .catch(function(error) {
+
+      console.error(error);
+
+      showResult(
+
+        "❌ 无法获取相机<br>" +
+        "Tidak dapat mendapatkan kamera",
+
+        "error"
+
+      );
+
+    });
 
 }
 
