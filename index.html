@@ -1128,3 +1128,74 @@ async function handleQR(qrCode) {
   );
 
 }
+/*
+ * ================================
+ * 初始化 Scanner
+ * ================================
+ */
+
+function startScanner() {
+
+  scanner =
+    new Html5Qrcode(
+      "reader"
+    );
+
+  Html5Qrcode
+    .getCameras()
+
+    .then(function(cameraList) {
+
+      cameras =
+        cameraList;
+
+      if (
+        cameras.length === 0
+      ) {
+
+        showResult(
+          "❌ 找不到相机<br>" +
+          "Tiada kamera dijumpai",
+          "error"
+        );
+
+        return;
+
+      }
+
+      const backCamera =
+        findCamera("back");
+
+      if (backCamera) {
+
+        startCamera(
+          backCamera,
+          "back"
+        );
+
+      } else {
+
+        startCamera(
+          cameras[0],
+          "front"
+        );
+
+      }
+
+    })
+
+    .catch(function(error) {
+
+      console.error(error);
+
+      showResult(
+        "❌ 无法获取相机<br>" +
+        "Tidak dapat mendapatkan kamera",
+        "error"
+      );
+
+    });
+
+}
+
+startScanner();
