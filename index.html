@@ -904,7 +904,45 @@ if (
       "error";
 
   }
+else if (
+  attendanceResult.message ===
+  "Student has already checked in today."
+) {
 
+  showResult(
+
+    "<div class='student-name-c'>" +
+      student.FullNameC +
+    "</div>" +
+
+    "<div class='student-name'>" +
+      student.FullName +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🏫 Class: " +
+      student.Class +
+    "</div>" +
+
+    "<br>" +
+
+    "<div>" +
+      "⚠️ 今天已经点名" +
+    "</div>" +
+
+    "<div>" +
+      "Already checked in" +
+    "</div>" +
+
+    "<div>" +
+      "Sudah hadir" +
+    "</div>",
+
+    "error"
+
+  );
+
+}
 
   showResult(
 
