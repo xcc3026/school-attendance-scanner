@@ -9,7 +9,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1">
 
-  <title>School Attendance Scanner</title>
+  <title>School Attendance QR Scanner</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -51,11 +51,15 @@
 
     #result {
       margin-top: 20px;
-      padding: 15px;
+      padding: 20px;
       border-radius: 12px;
       font-size: 20px;
       font-weight: bold;
-      min-height: 60px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
     }
 
     .waiting {
@@ -73,6 +77,11 @@
       color: #991b1b;
     }
 
+    .qr-number {
+      font-size: 28px;
+      margin-top: 8px;
+    }
+
   </style>
 
 </head>
@@ -85,13 +94,11 @@
     <h1>🏫 School Attendance</h1>
 
     <div class="subtitle">
-      扫描学生卡<br>
-      <b>Imbas Kad Murid</b>
+      扫描学生 QR Code<br>
+      <b>Imbas QR Kod Murid</b>
     </div>
 
-
     <div id="reader"></div>
-
 
     <div
       id="result"
@@ -109,10 +116,16 @@
 
 let scanner = null;
 
-let lastBarcode = "";
+let lastCode = "";
 
 let lastScanTime = 0;
 
+let isProcessing = false;
+
+
+/*
+ * 显示结果
+ */
 
 function showResult(
   message,
@@ -129,6 +142,42 @@ function showResult(
 }
 
 
+/*
+ * 语音
+ */
+
+function speak(
+  text
+) {
+
+  if (
+    !("speechSynthesis" in window)
+  ) {
+
+    return;
+
+  }
+
+  window.speechSynthesis.cancel();
+
+  const speech =
+    new SpeechSynthesisUtterance(text);
+
+  speech.lang = "en-US";
+
+  speech.rate = 1;
+
+  window.speechSynthesis.speak(
+    speech
+  );
+
+}
+
+
+/*
+ * 开始 Scanner
+ */
+
 function startScanner() {
 
   scanner =
@@ -140,8 +189,8 @@ function startScanner() {
     fps: 10,
 
     qrbox: {
-      width: 300,
-      height: 150
+      width: 250,
+      height: 250
     },
 
     rememberLastUsedCamera: true,
@@ -188,19 +237,16 @@ function startScanner() {
                 .toLowerCase();
 
             return (
+
               label.includes("back") ||
               label.includes("rear") ||
               label.includes("environment")
+
             );
 
           }
         );
 
-
-      /*
-       * 如果找不到后置，
-       * 就使用第一台相机
-       */
 
       if (!camera) {
 
@@ -218,7 +264,7 @@ function startScanner() {
 
         function(decodedText) {
 
-          handleBarcode(
+          handleQR(
             decodedText
           );
 
@@ -242,10 +288,13 @@ function startScanner() {
       console.error(error);
 
       showResult(
+
         "❌ 无法开启相机<br>" +
         "Tidak dapat membuka kamera<br><br>" +
         error,
+
         "error"
+
       );
 
     });
@@ -253,8 +302,12 @@ function startScanner() {
 }
 
 
-function handleBarcode(
-  barcode
+/*
+ * QR Code 扫描成功
+ */
+
+function handleQR(
+  qrCode
 ) {
 
   const now =
@@ -262,13 +315,25 @@ function handleBarcode(
 
 
   /*
-   * 防止同一个学生
-   * 连续扫描多次
+   * 正在处理时，
+   * 不接受新的扫描
+   */
+
+  if (isProcessing) {
+
+    return;
+
+  }
+
+
+  /*
+   * 防止同一个 QR
+   * 连续扫描
    */
 
   if (
 
-    barcode === lastBarcode &&
+    qrCode === lastCode &&
 
     now - lastScanTime < 3000
 
@@ -279,8 +344,10 @@ function handleBarcode(
   }
 
 
-  lastBarcode =
-    barcode;
+  isProcessing = true;
+
+  lastCode =
+    qrCode;
 
   lastScanTime =
     now;
@@ -289,19 +356,61 @@ function handleBarcode(
   showResult(
 
     "✅ 扫描成功<br>" +
-    "Imbasan berjaya<br><br>" +
-    "Barcode: <strong>" +
-    barcode +
-    "</strong>",
+
+    "<div class='qr-number'>" +
+    qrCode +
+    "</div><br>" +
+
+    "Good morning!<br>" +
+    "QR Code scanned successfully.",
 
     "success"
 
   );
 
 
+  /*
+   * 英文语音
+   */
+
+  speak(
+
+    "Good morning! " +
+    "QR Code scanned successfully."
+
+  );
+
+
   console.log(
-    "Barcode:",
-    barcode
+    "QR Code:",
+    qrCode
+  );
+
+
+  /*
+   * 2 秒后准备扫描下一位
+   */
+
+  setTimeout(
+
+    function() {
+
+      showResult(
+
+        "📷 等待下一位学生...<br>" +
+        "Menunggu murid seterusnya...",
+
+        "waiting"
+
+      );
+
+      isProcessing =
+        false;
+
+    },
+
+    2000
+
   );
 
 }
