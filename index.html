@@ -877,37 +877,70 @@ if (
   attendanceResult.success
 ) {
 
+  let attendanceMessage = "";
+
+  let attendanceType = "success";
+
+
   if (
     attendanceResult.status === "Present"
   ) {
 
-    showResult(
-
-      "✅ 出席成功<br>" +
-      "Present<br>" +
-      "Hadir",
-
-      "success"
-
-    );
-
-  } else if (
-    attendanceResult.status === "Late"
-  ) {
-
-    showResult(
-
-      "🔴 迟到<br>" +
-      "Late<br>" +
-      "Lewat",
-
-      "error"
-
-    );
+    attendanceMessage =
+      "🟢 出席成功<br>" +
+      "Present · Hadir";
 
   }
 
-}
+  else if (
+    attendanceResult.status === "Late"
+  ) {
+
+    attendanceMessage =
+      "🔴 迟到<br>" +
+      "Late · Lewat";
+
+    attendanceType =
+      "error";
+
+  }
+
+
+  showResult(
+
+    "<div class='student-name-c'>" +
+      student.FullNameC +
+    "</div>" +
+
+    "<div class='student-name'>" +
+      student.FullName +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🏫 Class: " +
+      student.Class +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🍱 RMT: " +
+      (
+        String(student.RMT)
+          .toUpperCase() === "YES"
+          ? "YES"
+          : "NO"
+      ) +
+    "</div>" +
+
+    "<br>" +
+
+    "<div>" +
+      attendanceMessage +
+    "</div>",
+
+    attendanceType
+
+  );
+
 }
 catch (error) {
 
