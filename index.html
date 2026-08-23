@@ -850,7 +850,7 @@ async function handleQR(
    */
 
   const student =
-    result.student;
+  result.student.student || result.student;
 
 
   showStudent(
