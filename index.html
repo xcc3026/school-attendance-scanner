@@ -728,17 +728,11 @@ async function handleQR(qrCode) {
   lastCode = qrCode;
   lastScanTime = Date.now();
 
-
-  /*
-   * 查询学生
-   */
-
   showResult(
     "🔍 查询学生资料...<br>" +
     "Mencari maklumat murid...",
     "waiting"
   );
-
 
   try {
 
@@ -747,12 +741,10 @@ async function handleQR(qrCode) {
         qrCode.trim()
       );
 
-
     console.log(
       "API RESULT:",
       JSON.stringify(result)
     );
-
 
     /*
      * 学生不存在
@@ -766,11 +758,7 @@ async function handleQR(qrCode) {
       showResult(
 
         "❌ 找不到学生<br>" +
-        "Murid tidak dijumpai<br><br>" +
-
-        "<div class='qr-number'>" +
-        qrCode +
-        "</div>",
+        "Murid tidak dijumpai",
 
         "error"
 
@@ -787,7 +775,6 @@ async function handleQR(qrCode) {
     let student =
       result.student;
 
-
     if (
       student &&
       student.student
@@ -798,6 +785,10 @@ async function handleQR(qrCode) {
 
     }
 
+
+    /*
+     * 确认学生资料
+     */
 
     if (
       !student ||
@@ -815,12 +806,6 @@ async function handleQR(qrCode) {
 
       return;
     }
-
-
-    console.log(
-      "STUDENT:",
-      student
-    );
 
 
     /*
@@ -868,23 +853,29 @@ async function handleQR(qrCode) {
 
       showResult(
 
-"<div class='student-name-c'>" +
-  student.FullNameC +
-"</div>" +
+        "<div class='student-name-c'>" +
+          student.FullNameC +
+        "</div>" +
 
-"<br>" +
+        "<br>" +
 
-"<div>" +
-  "⚠️ 今天已经点名" +
-"</div>" +
+        "<div>" +
+          "⚠️ 今天已经点名" +
+        "</div>" +
 
-"<div>" +
-  "Already checked in" +
-"</div>" +
+        "<div>" +
+          "Already checked in" +
+        "</div>" +
 
-"<div>" +
-  "Sudah hadir" +
-"</div>",
+        "<div>" +
+          "Sudah hadir" +
+        "</div>",
+
+        "error"
+
+      );
+
+    }
 
 
     /*
@@ -897,12 +888,10 @@ async function handleQR(qrCode) {
       attendanceResult.success === true
     ) {
 
-      const rmtText =
-        String(student.RMT)
-          .toUpperCase() === "YES"
-          ? "YES"
-          : "NO";
 
+      /*
+       * 正常出席
+       */
 
       if (
         attendanceResult.status ===
@@ -911,15 +900,16 @@ async function handleQR(qrCode) {
 
         showResult(
 
-        "<div class='student-name-c'>" +
-  student.FullNameC +
-"</div>" +
+          "<div class='student-name-c'>" +
+            student.FullNameC +
+          "</div>" +
 
-"<br>" +
+          "<br>" +
 
-"<div>" +
-  "🟢 出席成功" +
-"</div>" +
+          "<div>" +
+            "🟢 出席成功" +
+          "</div>" +
+
           "<div>" +
             "Present · Hadir" +
           "</div>",
@@ -936,72 +926,73 @@ async function handleQR(qrCode) {
       }
 
 
-     else if (
-if (
-  attendanceResult.status ===
-  "Present"
-) {
+      /*
+       * 迟到
+       */
 
-  showResult(
+      else if (
+        attendanceResult.status ===
+        "Late"
+      ) {
 
-    "<div class='student-name-c'>" +
-      student.FullNameC +
-    "</div>" +
+        showResult(
 
-    "<br>" +
+          "<div class='student-name-c'>" +
+            student.FullNameC +
+          "</div>" +
 
-    "<div>" +
-      "🟢 出席成功" +
-    "</div>" +
+          "<br>" +
 
-    "<div>" +
-      "Present · Hadir" +
-    "</div>",
+          "<div>" +
+            "🔴 迟到" +
+          "</div>" +
 
-    "success"
+          "<div>" +
+            "Late · Lewat" +
+          "</div>",
 
-  );
+          "error"
 
-  speak(
-    "Present. Hadir."
-  );
+        );
 
-}
 
-else if (
-  attendanceResult.status ===
-  "Late"
-) {
+        speak(
+          "Late. Lewat."
+        );
 
-  showResult(
+      }
 
-    "<div class='student-name-c'>" +
-      student.FullNameC +
-    "</div>" +
 
-    "<br>" +
+      /*
+       * 其他状态
+       */
 
-    "<div>" +
-      "🔴 迟到" +
-    "</div>" +
+      else {
 
-    "<div>" +
-      "Late · Lewat" +
-    "</div>",
+        showResult(
 
-    "error"
+          "<div class='student-name-c'>" +
+            student.FullNameC +
+          "</div>" +
 
-  );
+          "<br>" +
 
-  speak(
-    "Late. Lewat."
-  );
+          "<div>" +
+            "⚠️ " +
+            attendanceResult.status +
+          "</div>",
 
-}
+          "error"
+
+        );
+
+      }
+
+    }
 
 
     /*
-     * 其他 Attendance 错误
+     * Attendance 失败
      */
 
     else {
@@ -1018,8 +1009,8 @@ else if (
 
     }
 
-
   }
+
 
   catch (error) {
 
