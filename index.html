@@ -847,6 +847,42 @@ async function handleQR(qrCode) {
     showStudent(
       student
     );
+    /*
+ * 自动记录 Attendance
+ */
+
+const attendanceUrl =
+  API_URL +
+  "?action=attendance" +
+  "&studentID=" +
+  encodeURIComponent(
+    student.StudentID
+  );
+
+try {
+
+  const attendanceResponse =
+    await fetch(
+      attendanceUrl
+    );
+
+  const attendanceResult =
+    await attendanceResponse.json();
+
+  console.log(
+    "ATTENDANCE:",
+    attendanceResult
+  );
+
+}
+catch (error) {
+
+  console.error(
+    "Attendance Error:",
+    error
+  );
+
+}
 
     /*
      * 播放三语短句
