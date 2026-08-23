@@ -73,9 +73,9 @@
       margin-top: 20px;
       padding: 20px;
       border-radius: 12px;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
-      min-height: 100px;
+      min-height: 150px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -97,9 +97,25 @@
       color: #991b1b;
     }
 
+    .student-name-c {
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+
+    .student-name {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .student-info {
+      font-size: 18px;
+      margin: 4px 0;
+    }
+
     .qr-number {
-      font-size: 28px;
-      margin-top: 8px;
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
     }
 
   </style>
@@ -161,6 +177,23 @@
 
 <script>
 
+
+/*
+ * ================================
+ * Apps Script Web App
+ * ================================
+ */
+
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
+
+
+/*
+ * ================================
+ * Scanner variables
+ * ================================
+ */
+
 let scanner = null;
 
 let cameras = [];
@@ -177,7 +210,22 @@ let isSwitching = false;
 
 
 /*
+ * ================================
+ * 三语语音
+ *
+ * 0 = 中文
+ * 1 = English
+ * 2 = Bahasa Melayu
+ * ================================
+ */
+
+let languageIndex = 0;
+
+
+/*
+ * ================================
  * 显示结果
+ * ================================
  */
 
 function showResult(
@@ -196,11 +244,14 @@ function showResult(
 
 
 /*
+ * ================================
  * 语音
+ * ================================
  */
 
 function speak(
-  text
+  text,
+  language
 ) {
 
   if (
@@ -211,14 +262,25 @@ function speak(
 
   }
 
+
   window.speechSynthesis.cancel();
 
+
   const speech =
-    new SpeechSynthesisUtterance(text);
+    new SpeechSynthesisUtterance(
+      text
+    );
 
-  speech.lang = "en-US";
 
-  speech.rate = 1;
+  speech.lang =
+    language;
+
+  speech.rate =
+    1.1;
+
+  speech.pitch =
+    1;
+
 
   window.speechSynthesis.speak(
     speech
@@ -228,14 +290,68 @@ function speak(
 
 
 /*
- * 根据前置 / 后置寻找相机
+ * ================================
+ * 播放三语短句
+ * ================================
+ */
+
+function speakGreeting() {
+
+  if (languageIndex === 0) {
+
+    speak(
+      "早安，加油！",
+      "zh-CN"
+    );
+
+  }
+
+  else if (languageIndex === 1) {
+
+    speak(
+      "Good morning!",
+      "en-US"
+    );
+
+  }
+
+  else {
+
+    speak(
+      "Selamat pagi!",
+      "ms-MY"
+    );
+
+  }
+
+
+  languageIndex++;
+
+
+  if (
+    languageIndex >= 3
+  ) {
+
+    languageIndex = 0;
+
+  }
+
+}
+
+
+/*
+ * ================================
+ * 寻找相机
+ * ================================
  */
 
 function findCamera(
   type
 ) {
 
-  if (type === "back") {
+  if (
+    type === "back"
+  ) {
 
     return cameras.find(
       function(camera) {
@@ -255,7 +371,9 @@ function findCamera(
   }
 
 
-  if (type === "front") {
+  if (
+    type === "front"
+  ) {
 
     return cameras.find(
       function(camera) {
@@ -273,11 +391,16 @@ function findCamera(
 
   }
 
+
+  return null;
+
 }
 
 
 /*
- * 更新按钮
+ * ================================
+ * 更新相机按钮
+ * ================================
  */
 
 function updateCameraButtons(
@@ -293,7 +416,9 @@ function updateCameraButtons(
     .classList.remove("active");
 
 
-  if (type === "back") {
+  if (
+    type === "back"
+  ) {
 
     document
       .getElementById("backButton")
@@ -302,7 +427,9 @@ function updateCameraButtons(
   }
 
 
-  if (type === "front") {
+  if (
+    type === "front"
+  ) {
 
     document
       .getElementById("frontButton")
@@ -314,7 +441,9 @@ function updateCameraButtons(
 
 
 /*
+ * ================================
  * 开始指定相机
+ * ================================
  */
 
 function startCamera(
@@ -401,7 +530,9 @@ function startCamera(
 
 
 /*
+ * ================================
  * 切换相机
+ * ================================
  */
 
 function changeCamera(
@@ -442,10 +573,6 @@ function changeCamera(
     true;
 
 
-  /*
-   * 停止目前 Scanner
-   */
-
   if (
     scanner.isScanning
   ) {
@@ -454,21 +581,21 @@ function changeCamera(
 
       .then(function() {
 
-        scanner.clear()
+        return scanner.clear();
 
-          .then(function() {
+      })
 
-            scanner =
-              new Html5Qrcode(
-                "reader"
-              );
+      .then(function() {
 
-            startCamera(
-              camera,
-              type
-            );
+        scanner =
+          new Html5Qrcode(
+            "reader"
+          );
 
-          });
+        startCamera(
+          camera,
+          type
+        );
 
       })
 
@@ -481,7 +608,9 @@ function changeCamera(
 
       });
 
-  } else {
+  }
+
+  else {
 
     startCamera(
       camera,
@@ -494,10 +623,127 @@ function changeCamera(
 
 
 /*
- * QR 扫描成功
+ * ================================
+ * 查询学生资料
+ * ================================
  */
 
-function handleQR(
+async function getStudent(
+  qrCode
+) {
+
+  try {
+
+    const url =
+      API_URL +
+      "?barcode=" +
+      encodeURIComponent(
+        qrCode
+      );
+
+
+    const response =
+      await fetch(url);
+
+
+    if (
+      !response.ok
+    ) {
+
+      throw new Error(
+        "Network response was not OK"
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    return data;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "API Error:",
+      error
+    );
+
+
+    return {
+      success: false,
+      message:
+        "无法连接学生资料系统"
+    };
+
+  }
+
+}
+
+
+/*
+ * ================================
+ * 显示学生资料
+ * ================================
+ */
+
+function showStudent(
+  student
+) {
+
+  const rmtText =
+    String(student.RMT)
+      .toUpperCase() === "YES"
+      ? "YES"
+      : "NO";
+
+
+  showResult(
+
+    "<div class='student-name-c'>" +
+      student.FullNameC +
+    "</div>" +
+
+    "<div class='student-name'>" +
+      student.FullName +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🏫 Class: " +
+      student.Class +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🍱 RMT: " +
+      rmtText +
+    "</div>" +
+
+    "<div class='student-info'>" +
+      "🟢 ACTIVE" +
+    "</div>" +
+
+    "<div class='qr-number'>" +
+      "QR: " +
+      student.Barcode +
+    "</div>",
+
+    "success"
+
+  );
+
+}
+
+
+/*
+ * ================================
+ * QR 扫描成功
+ * ================================
+ */
+
+async function handleQR(
   qrCode
 ) {
 
@@ -537,29 +783,91 @@ function handleQR(
     now;
 
 
+  /*
+   * 先显示查询中
+   */
+
   showResult(
 
-    "✅ 扫描成功<br>" +
+    "🔍 查询学生资料...<br>" +
+    "Mencari maklumat murid...",
 
-    "<div class='qr-number'>" +
-    qrCode +
-    "</div><br>" +
-
-    "Good morning!<br>" +
-    "QR Code scanned successfully.",
-
-    "success"
+    "waiting"
 
   );
 
 
-  speak(
+  /*
+   * 查询 Google Sheet
+   */
 
-    "Good morning! " +
-    "QR Code scanned successfully."
+  const result =
+    await getStudent(
+      qrCode
+    );
 
+
+  /*
+   * 找不到学生
+   */
+
+  if (
+    !result.success
+  ) {
+
+    showResult(
+
+      "❌ 找不到学生<br>" +
+      "Murid tidak dijumpai<br><br>" +
+
+      "<div class='qr-number'>" +
+      qrCode +
+      "</div>",
+
+      "error"
+
+    );
+
+
+    setTimeout(
+      function() {
+
+        isProcessing =
+          false;
+
+      },
+      1500
+    );
+
+
+    return;
+
+  }
+
+
+  /*
+   * 找到学生
+   */
+
+  const student =
+    result.student;
+
+
+  showStudent(
+    student
   );
 
+
+  /*
+   * 播放三语短句
+   */
+
+  speakGreeting();
+
+
+  /*
+   * 2 秒后准备下一位
+   */
 
   setTimeout(
 
@@ -587,7 +895,9 @@ function handleQR(
 
 
 /*
- * 初始化
+ * ================================
+ * 初始化 Scanner
+ * ================================
  */
 
 function startScanner() {
@@ -613,7 +923,8 @@ function startScanner() {
 
         showResult(
 
-          "❌ 找不到相机",
+          "❌ 找不到相机<br>" +
+          "Tiada kamera dijumpai",
 
           "error"
 
@@ -639,7 +950,9 @@ function startScanner() {
           "back"
         );
 
-      } else {
+      }
+
+      else {
 
         startCamera(
           cameras[0],
