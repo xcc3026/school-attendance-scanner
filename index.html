@@ -634,22 +634,21 @@ async function getStudent(
 
   try {
 
-   const cleanCode = qrCode.trim();
+    const cleanCode =
+      qrCode.trim();
 
-const url =
-  API_URL +
-  "?barcode=" +
-  encodeURIComponent(
-    cleanCode
-  );
+    const url =
+      API_URL +
+      "?action=scan" +
+      "&barcode=" +
+      encodeURIComponent(
+        cleanCode
+      );
 
     const response =
       await fetch(url);
 
-
-    if (
-      !response.ok
-    ) {
+    if (!response.ok) {
 
       throw new Error(
         "Network response was not OK"
@@ -657,14 +656,26 @@ const url =
 
     }
 
-
-    const data =
-      await response.json();
-
-
-    return data;
+    return await response.json();
 
   }
+
+  catch (error) {
+
+    console.error(
+      "API Error:",
+      error
+    );
+
+    return {
+      success: false,
+      message:
+        "无法连接学生资料系统"
+    };
+
+  }
+
+}
 
   catch (error) {
 
