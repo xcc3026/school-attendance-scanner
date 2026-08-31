@@ -630,6 +630,104 @@ function changeCamera(
  * ================================
  */
 
+async function loadStudents() {
+
+  try {
+
+    showResult(
+      "⏳ 正在加载学生资料...<br>" +
+      "Memuatkan maklumat murid...",
+      "waiting"
+    );
+
+    const url =
+      API_URL +
+      "?action=students" +
+      "&classes=" +
+      encodeURIComponent("6K,6M");
+
+    const response =
+      await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        "Failed to load students"
+      );
+    }
+
+    const result =
+      await response.json();
+
+    console.log(
+      "STUDENTS LOADED:",
+      result
+    );
+
+    if (
+      !result ||
+      result.success !== true ||
+      !Array.isArray(result.students)
+    ) {
+
+      throw new Error(
+        "Invalid student data"
+      );
+
+    }
+
+    studentCache = {};
+
+    result.students.forEach(
+      function(student) {
+
+        if (student.Barcode) {
+
+          studentCache[
+            String(student.Barcode)
+              .trim()
+              .toUpperCase()
+          ] = student;
+
+        }
+
+      }
+    );
+
+    studentsLoaded = true;
+
+    console.log(
+      "STUDENT CACHE:",
+      studentCache
+    );
+
+    showResult(
+      "✅ 学生资料已准备好<br>" +
+      "6K + 6M<br>" +
+      "Murid sedia untuk diimbas",
+      "success"
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "LOAD STUDENTS ERROR:",
+      error
+    );
+
+    studentsLoaded = false;
+
+    showResult(
+      "❌ 无法加载学生资料<br>" +
+      "Tidak dapat memuatkan maklumat murid",
+      "error"
+    );
+
+  }
+
+}
+  
 async function getStudent(
   qrCode
 ) {
