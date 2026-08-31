@@ -1265,7 +1265,10 @@ function startScanner() {
 
 }
 
-startScanner();
+loadStudents()
+  .then(function() {
+    startScanner();
+  });
 </script>
 
 </body>
