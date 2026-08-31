@@ -732,10 +732,36 @@ async function getStudent(
   qrCode
 ) {
 
-  try {
+  const cleanCode =
+    qrCode.trim()
+      .toUpperCase();
 
-    const cleanCode =
-      qrCode.trim();
+  /*
+   * 先从浏览器缓存找
+   */
+
+  const student =
+    studentCache[cleanCode];
+
+  if (student) {
+
+    console.log(
+      "Student found in cache:",
+      student
+    );
+
+    return {
+      success: true,
+      student: student
+    };
+
+  }
+
+  /*
+   * 缓存找不到才查询服务器
+   */
+
+  try {
 
     const url =
       API_URL +
