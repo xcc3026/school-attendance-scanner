@@ -2,19 +2,12 @@
 <html lang="zh-CN">
 
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>School Attendance QR Scanner</title>
-
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-
     * {
       box-sizing: border-box;
     }
@@ -33,6 +26,7 @@
       background: white;
       padding: 20px;
       border-radius: 18px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     h1 {
@@ -63,10 +57,12 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      background: #e5e7eb;
     }
 
     .camera-button.active {
       outline: 3px solid #333;
+      background: #d1d5db;
     }
 
     #result {
@@ -102,33 +98,18 @@
       margin-bottom: 5px;
     }
 
-    .student-name {
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-
     .student-info {
-      font-size: 18px;
-      margin: 4px 0;
+      font-size: 16px;
+      color: #4b5563;
+      margin-top: 5px;
     }
-
-    .qr-number {
-      font-size: 14px;
-      color: #666;
-      margin-top: 10px;
-    }
-
   </style>
-
 </head>
-
 
 <body>
 
   <div class="container">
-
     <h1>🏫 School Attendance</h1>
-
     <div class="subtitle">
       扫描学生 QR Code<br>
       <b>Imbas QR Kod Murid</b>
@@ -136,1141 +117,313 @@
 
     <div id="reader"></div>
 
-
     <div class="camera-buttons">
-
-      <button
-        id="backButton"
-        class="camera-button"
-        onclick="changeCamera('back')">
-
-        📷 后置镜头<br>
-        Kamera Belakang
-
+      <button id="backButton" class="camera-button" onclick="changeCamera('back')">
+        📷 后置镜头<br>Kamera Belakang
       </button>
-
-
-      <button
-        id="frontButton"
-        class="camera-button"
-        onclick="changeCamera('front')">
-
-        🤳 前置镜头<br>
-        Kamera Hadapan
-
+      <button id="frontButton" class="camera-button" onclick="changeCamera('front')">
+        🤳 前置镜头<br>Kamera Hadapan
       </button>
-
     </div>
 
-
-    <div
-      id="result"
-      class="waiting">
-
-      📷 等待扫描...<br>
-      Menunggu imbasan...
-
+    <div id="result" class="waiting">
+      📷 等待扫描...<br>Menunggu imbasan...
     </div>
-
   </div>
 
-
-<script>
-
-
-/*
- * ================================
- * Apps Script Web App
- * ================================
- */
-
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
-
-let studentCache = {};
-let studentsLoaded = false;
-
-/*
- * ================================
- * Scanner variables
- * ================================
- */
-
-let scanner = null;
-
-let cameras = [];
-
-let currentCamera = null;
-
-let lastCode = "";
-
-let lastScanTime = 0;
-
-let isProcessing = false;
-
-let isSwitching = false;
-
-
-/*
- * ================================
- * 三语语音
- *
- * 0 = 中文
- * 1 = English
- * 2 = Bahasa Melayu
- * ================================
- */
-
-let languageIndex = 0;
-
-
-/*
- * ================================
- * 显示结果
- * ================================
- */
-
-function showResult(
-  message,
-  type
-) {
-
-  const result =
-    document.getElementById("result");
-
-  result.className = type;
-
-  result.innerHTML = message;
-
-}
-
-
-/*
- * ================================
- * 语音
- * ================================
- */
-
-function speak(
-  text,
-  language
-) {
-
-  if (
-    !("speechSynthesis" in window)
-  ) {
-
-    return;
-
-  }
-
-
-  window.speechSynthesis.cancel();
-
-
-  const speech =
-    new SpeechSynthesisUtterance(
-      text
-    );
-
-
-  speech.lang =
-    language;
-
-  speech.rate =
-    1.1;
-
-  speech.pitch =
-    1;
-
-
-  window.speechSynthesis.speak(
-    speech
-  );
-
-}
-
-
-/*
- * ================================
- * 播放三语短句
- * ================================
- */
-
-function speakGreeting() {
-
-  if (languageIndex === 0) {
-
-    speak(
-      "早安，加油！",
-      "zh-CN"
-    );
-
-  }
-
-  else if (languageIndex === 1) {
-
-    speak(
-      "Good morning!",
-      "en-US"
-    );
-
-  }
-
-  else {
-
-    speak(
-      "Selamat pagi!",
-      "ms-MY"
-    );
-
-  }
-
-
-  languageIndex++;
-
-
-  if (
-    languageIndex >= 3
-  ) {
-
-    languageIndex = 0;
-
-  }
-
-}
-
-
-/*
- * ================================
- * 寻找相机
- * ================================
- */
-
-function findCamera(
-  type
-) {
-
-  if (
-    type === "back"
-  ) {
-
-    return cameras.find(
-      function(camera) {
-
-        const label =
-          camera.label.toLowerCase();
-
-        return (
-          label.includes("back") ||
-          label.includes("rear") ||
-          label.includes("environment")
-        );
-
-      }
-    );
-
-  }
-
-
-  if (
-    type === "front"
-  ) {
-
-    return cameras.find(
-      function(camera) {
-
-        const label =
-          camera.label.toLowerCase();
-
-        return (
-          label.includes("front") ||
-          label.includes("user")
-        );
-
-      }
-    );
-
-  }
-
-
-  return null;
-
-}
-
-
-/*
- * ================================
- * 更新相机按钮
- * ================================
- */
-
-function updateCameraButtons(
-  type
-) {
-
-  document
-    .getElementById("backButton")
-    .classList.remove("active");
-
-  document
-    .getElementById("frontButton")
-    .classList.remove("active");
-
-
-  if (
-    type === "back"
-  ) {
-
-    document
-      .getElementById("backButton")
-      .classList.add("active");
-
-  }
-
-
-  if (
-    type === "front"
-  ) {
-
-    document
-      .getElementById("frontButton")
-      .classList.add("active");
-
-  }
-
-}
-
-
-/*
- * ================================
- * 开始指定相机
- * ================================
- */
-
-function startCamera(
-  camera,
-  type
-) {
-
-  const config = {
-
-    fps: 15,
-
-    qrbox: {
-      width: 220,
-      height: 220
-    },
-
-    rememberLastUsedCamera: true,
-
-    showTorchButtonIfSupported: true,
-
-    showZoomSliderIfSupported: true
-
-  };
-
-
-  scanner.start(
-
-    camera.id,
-
-    config,
-
-    function(decodedText) {
-
-      handleQR(
-        decodedText
-      );
-
-    },
-
-    function() {
-
-      /*
-       * 正常扫描失败
-       * 不显示错误
-       */
-
+  <script>
+    /*
+     * ================================
+     * Config & Global Variables
+     * ================================
+     */
+    const API_URL = "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
+
+    let studentCache = {};
+    let studentsLoaded = false;
+
+    let scanner = null;
+    let cameras = [];
+    let currentCamera = null;
+    let lastCode = "";
+    let isProcessing = false;
+    let isSwitching = false;
+
+    /*
+     * ================================
+     * UI & Speech Utilities
+     * ================================
+     */
+    function showResult(message, type) {
+      const result = document.getElementById("result");
+      result.className = type;
+      result.innerHTML = message;
     }
 
-  )
+    function speak(text, language = "zh-CN") {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const speech = new SpeechSynthesisUtterance(text);
+      speech.lang = language;
+      speech.rate = 1.1;
+      speech.pitch = 1;
+      window.speechSynthesis.speak(speech);
+    }
 
-  .then(function() {
+    /*
+     * ================================
+     * Camera Management
+     * ================================
+     */
+    function findCamera(type) {
+      if (type === "back") {
+        return cameras.find(c => {
+          const l = c.label.toLowerCase();
+          return l.includes("back") || l.includes("rear") || l.includes("environment");
+        });
+      }
+      if (type === "front") {
+        return cameras.find(c => {
+          const l = c.label.toLowerCase();
+          return l.includes("front") || l.includes("user");
+        });
+      }
+      return null;
+    }
 
-    currentCamera =
-      type;
+    function updateCameraButtons(type) {
+      document.getElementById("backButton").classList.remove("active");
+      document.getElementById("frontButton").classList.remove("active");
+      if (type === "back") document.getElementById("backButton").classList.add("active");
+      if (type === "front") document.getElementById("frontButton").classList.add("active");
+    }
 
-    updateCameraButtons(
-      type
-    );
+    function startCamera(camera, type) {
+      const config = {
+        fps: 15,
+        qrbox: { width: 220, height: 220 },
+        rememberLastUsedCamera: true
+      };
 
-    isSwitching =
-      false;
-
-  })
-
-  .catch(function(error) {
-
-    console.error(error);
-
-    isSwitching =
-      false;
-
-    showResult(
-
-      "❌ 无法开启相机<br>" +
-      "Tidak dapat membuka kamera",
-
-      "error"
-
-    );
-
-  });
-
-}
-
-
-/*
- * ================================
- * 切换相机
- * ================================
- */
-
-function changeCamera(
-  type
-) {
-
-  if (
-    isSwitching ||
-    currentCamera === type
-  ) {
-
-    return;
-
-  }
-
-
-  const camera =
-    findCamera(type);
-
-
-  if (!camera) {
-
-    showResult(
-
-      "⚠️ 找不到此相机<br>" +
-      "Kamera tidak dijumpai",
-
-      "error"
-
-    );
-
-    return;
-
-  }
-
-
-  isSwitching =
-    true;
-
-
-  if (
-    scanner.isScanning
-  ) {
-
-    scanner.stop()
-
-      .then(function() {
-
-        return scanner.clear();
-
+      scanner.start(
+        camera.id,
+        config,
+        decodedText => handleQR(decodedText),
+        () => {} // 忽略解码失败时的正常高频回调
+      )
+      .then(() => {
+        currentCamera = type;
+        updateCameraButtons(type);
+        isSwitching = false;
       })
-
-      .then(function() {
-
-        scanner =
-          new Html5Qrcode(
-            "reader"
-          );
-
-        startCamera(
-          camera,
-          type
-        );
-
-      })
-
-      .catch(function(error) {
-
+      .catch(error => {
         console.error(error);
-
-        isSwitching =
-          false;
-
+        isSwitching = false;
+        showResult("❌ 无法开启相机<br>Tidak dapat membuka kamera", "error");
       });
-
-  }
-
-  else {
-
-    startCamera(
-      camera,
-      type
-    );
-
-  }
-
-}
-
-
-/*
- * ================================
- * 查询学生资料
- * ================================
- */
-
-async function loadStudents() {
-
-  try {
-
-    showResult(
-      "⏳ 正在加载学生资料...<br>" +
-      "Memuatkan maklumat murid...",
-      "waiting"
-    );
-
-    const url =
-      API_URL +
-      "?action=students" +
-      "&classes=" +
-      encodeURIComponent("6K,6M");
-
-    const response =
-      await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        "Failed to load students"
-      );
     }
 
-    const result =
-      await response.json();
+    function changeCamera(type) {
+      if (isSwitching || currentCamera === type) return;
 
-    console.log(
-      "STUDENTS LOADED:",
-      result
-    );
+      const camera = findCamera(type);
+      if (!camera) {
+        showResult("⚠️ 找不到此相机<br>Kamera tidak dijumpai", "error");
+        return;
+      }
 
-    if (
-      !result ||
-      result.success !== true ||
-      !Array.isArray(result.students)
-    ) {
-
-      throw new Error(
-        "Invalid student data"
-      );
-
+      isSwitching = true;
+      if (scanner && scanner.isScanning) {
+        scanner.stop()
+          .then(() => scanner.clear())
+          .then(() => {
+            scanner = new Html5Qrcode("reader");
+            startCamera(camera, type);
+          })
+          .catch(error => {
+            console.error(error);
+            isSwitching = false;
+          });
+      } else {
+        startCamera(camera, type);
+      }
     }
 
-    studentCache = {};
+    /*
+     * ================================
+     * Data Pre-loading & Lookup
+     * ================================
+     */
+    async function loadStudents() {
+      try {
+        showResult("⏳ 正在加载学生资料...<br>Memuatkan maklumat murid...", "waiting");
+        
+        // 加载全校或特定班级的数据
+        const url = API_URL + "?action=students&classes=" + encodeURIComponent("6K,6M");
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Network error loading students");
 
-    result.students.forEach(
-      function(student) {
-
-        if (student.Barcode) {
-
-          studentCache[
-            String(student.Barcode)
-              .trim()
-              .toUpperCase()
-          ] = student;
-
+        const result = await response.json();
+        if (!result || result.success !== true || !Array.isArray(result.students)) {
+          throw new Error("Invalid student dataset");
         }
 
+        studentCache = {};
+        result.students.forEach(student => {
+          if (student.Barcode) {
+            studentCache[String(student.Barcode).trim().toUpperCase()] = student;
+          }
+        });
+
+        studentsLoaded = true;
+        showResult("✅ 学生资料已就绪<br>Sedia untuk diimbas", "success");
+      } catch (error) {
+        console.error("LOAD STUDENTS ERROR:", error);
+        studentsLoaded = false;
+        showResult("⚠️ 缓存加载失败，将切换至在线查询<br>Mod dalam talian", "waiting");
       }
-    );
-
-    studentsLoaded = true;
-
-    console.log(
-      "STUDENT CACHE:",
-      studentCache
-    );
-
-    showResult(
-      "✅ 学生资料已准备好<br>" +
-      "6K + 6M<br>" +
-      "Murid sedia untuk diimbas",
-      "success"
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "LOAD STUDENTS ERROR:",
-      error
-    );
-
-    studentsLoaded = false;
-
-    showResult(
-      "❌ 无法加载学生资料<br>" +
-      "Tidak dapat memuatkan maklumat murid",
-      "error"
-    );
-
-  }
-
-}
-  
-async function getStudent(
-  qrCode
-) {
-
-  const cleanCode =
-    qrCode.trim()
-      .toUpperCase();
-
-  /*
-   * 先从浏览器缓存找
-   */
-
-  const student =
-    studentCache[cleanCode];
-
-  if (student) {
-
-    console.log(
-      "Student found in cache:",
-      student
-    );
-
-    return {
-      success: true,
-      student: student
-    };
-
-  }
-
-  /*
-   * 缓存找不到才查询服务器
-   */
-
-  try {
-
-    const url =
-      API_URL +
-      "?action=student" +
-      "&barcode=" +
-      encodeURIComponent(
-        cleanCode
-      );
-
-    const response =
-      await fetch(url);
-
-    if (!response.ok) {
-
-      throw new Error(
-        "Network response was not OK"
-      );
-
     }
 
-    return await response.json();
+    async function getStudent(qrCode) {
+      const cleanCode = qrCode.trim().toUpperCase();
 
-  }
+      // 1. 优先查缓存
+      if (studentCache[cleanCode]) {
+        return { success: true, student: studentCache[cleanCode] };
+      }
 
-  catch (error) {
-
-    console.error(
-      "API Error:",
-      error
-    );
-
-    return {
-      success: false,
-      message:
-        "无法连接学生资料系统"
-    };
-
-  }
-
-}
-
-/*
- * ================================
- * 显示学生资料
- * ================================
- */
-
-function showStudent(
-  student
-) {
-
-  showResult(
-
-    "<div class='student-name-c'>" +
-      student.FullNameC +
-    "</div>",
-
-    "success"
-
-  );
-
-}
-
-
-/*
- * ================================
- * QR 扫描成功
- * ================================
- */
-async function handleQR(qrCode) {
-
-  if (isProcessing) {
-    return;
-  }
-
-  if (qrCode === lastCode) {
-    return;
-  }
-
-  isProcessing = true;
-
-  lastCode = qrCode;
-  lastScanTime = Date.now();
-
-  showResult(
-    "🔍 查询学生资料...<br>" +
-    "Mencari maklumat murid...",
-    "waiting"
-  );
-
-  try {
-
-    const result =
-      await getStudent(
-        qrCode.trim()
-      );
-
-    console.log(
-      "API RESULT:",
-      JSON.stringify(result)
-    );
-
-    /*
-     * 学生不存在
-     */
-
-    if (
-      !result ||
-      result.success !== true
-    ) {
-
-      showResult(
-
-        "❌ 找不到学生<br>" +
-        "Murid tidak dijumpai",
-
-        "error"
-
-      );
-
-      return;
+      // 2. 缓存找不到再通过网络查询
+      try {
+        const url = API_URL + "?action=student&barcode=" + encodeURIComponent(cleanCode);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network error");
+        return await response.json();
+      } catch (error) {
+        console.error("API Error:", error);
+        return { success: false, message: "无法连接服务器" };
+      }
     }
-
-
-    /*
-     * 取得学生资料
-     */
-
-   let student =
-  result.student;
-
-if (
-  student &&
-  student.student
-) {
-
-  student =
-    student.student;
-
-}
-
-if (
-  student &&
-  student.student
-) {
-
-  student =
-    student.student;
-
-}
-
-
-    /*
-     * 确认学生资料
-     */
-
-    if (
-      !student ||
-      !student.StudentID
-    ) {
-
-      showResult(
-
-        "❌ 学生资料错误<br>" +
-        "Maklumat murid tidak sah",
-
-        "error"
-
-      );
-
-      return;
-    }
-
 
     /*
      * ================================
-     * 记录 Attendance
+     * Core QR Processing
      * ================================
      */
+    async function handleQR(qrCode) {
+      if (isProcessing) return;
+      if (qrCode === lastCode) return;
 
-    const attendanceUrl =
-      API_URL +
-      "?action=attendance" +
-      "&studentID=" +
-      encodeURIComponent(
-        student.StudentID
-      );
+      isProcessing = true;
+      lastCode = qrCode;
 
+      showResult("🔍 查询学生资料...<br>Mencari maklumat murid...", "waiting");
 
-    const attendanceResponse =
-      await fetch(
-        attendanceUrl
-      );
+      try {
+        const result = await getStudent(qrCode);
 
+        // 验证学生数据
+        if (!result || result.success !== true || !result.student) {
+          showResult("❌ 找不到学生<br>Murid tidak dijumpai", "error");
+          resetScannerLock(2000);
+          return;
+        }
 
-    const attendanceResult =
-      await attendanceResponse.json();
+        const student = result.student;
+        if (!student.StudentID || !student.Class) {
+          showResult("❌ 学生资料不完整<br>Maklumat murid tidak lengkap", "error");
+          resetScannerLock(2000);
+          return;
+        }
 
+        // 发送点名请求（必须携带 class 参数）
+        const attendanceUrl = API_URL + 
+          "?action=attendance" + 
+          "&studentID=" + encodeURIComponent(student.StudentID) + 
+          "&class=" + encodeURIComponent(student.Class);
 
-    console.log(
-      "ATTENDANCE RESULT:",
-      attendanceResult
-    );
+        const attendanceResponse = await fetch(attendanceUrl);
+        const attendanceResult = await attendanceResponse.json();
 
+        // 逻辑判断处理
+        if (attendanceResult.success) {
+          // 成功签到
+          showResult(
+            `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
+            `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
+            `<div>🟢 出席成功</div><div>Present · Hadir</div>`,
+            "success"
+          );
+          speak(`${student.FullNameC || ''} 已出席`, "zh-CN");
+
+        } else if (attendanceResult.message && attendanceResult.message.includes("already checked in")) {
+          // 重复签到
+          showResult(
+            `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
+            `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
+            `<div>⚠️ 今天已点过名</div><div>Sudah hadir</div>`,
+            "error"
+          );
+          speak("今天已经点名", "zh-CN");
+
+        } else {
+          // 签到失败（其他原因）
+          showResult(
+            `❌ 签到失败: ${attendanceResult.message || '未知错误'}<br>Gagal merekod`,
+            "error"
+          );
+        }
+
+      } catch (error) {
+        console.error("QR ERROR:", error);
+        showResult("❌ 系统网络错误<br>Ralat sistem", "error");
+      }
+
+      resetScannerLock(2000);
+    }
+
+    function resetScannerLock(delayMs) {
+      setTimeout(() => {
+        showResult("📷 等待下一位学生...<br>Menunggu murid seterusnya...", "waiting");
+        isProcessing = false;
+        lastCode = "";
+      }, delayMs);
+    }
 
     /*
      * ================================
-     * 今天已经签到
+     * Initialize System
      * ================================
      */
+    function startScanner() {
+      scanner = new Html5Qrcode("reader");
 
-    if (
-      attendanceResult.success === false &&
-      attendanceResult.message ===
-      "Student has already checked in today."
-    ) {
+      Html5Qrcode.getCameras()
+        .then(cameraList => {
+          cameras = cameraList;
+          if (cameras.length === 0) {
+            showResult("❌ 找不到相机<br>Tiada kamera dijumpai", "error");
+            return;
+          }
 
-      showResult(
-
-        "<div class='student-name-c'>" +
-          student.FullNameC +
-        "</div>" +
-
-        "<br>" +
-
-        "<div>" +
-          "⚠️ 今天已经点名" +
-        "</div>" +
-
-        "<div>" +
-          "Already checked in" +
-        "</div>" +
-
-        "<div>" +
-          "Sudah hadir" +
-        "</div>",
-
-        "error"
-
-      );
-
+          const backCamera = findCamera("back");
+          if (backCamera) {
+            startCamera(backCamera, "back");
+          } else {
+            startCamera(cameras[0], "front");
+          }
+        })
+        .catch(error => {
+          console.error(error);
+          showResult("❌ 无法获取相机权限<br>Tiada kebenaran kamera", "error");
+        });
     }
 
-
-    /*
-     * ================================
-     * 新的 Attendance
-     * ================================
-     */
-
-    else if (
-      attendanceResult.success === true
-    ) {
-
-
-      /*
-       * 正常出席
-       */
-
-      if (
-        attendanceResult.status ===
-        "Present"
-      ) {
-
-        showResult(
-
-          "<div class='student-name-c'>" +
-            student.FullNameC +
-          "</div>" +
-
-          "<br>" +
-
-          "<div>" +
-            "🟢 出席成功" +
-          "</div>" +
-
-          "<div>" +
-            "Present · Hadir" +
-          "</div>",
-
-          "success"
-
-        );
-
-
-        speak(
-          "Present. Hadir."
-        );
-
-      }
-
-
-      /*
-       * 迟到
-       */
-
-      else if (
-        attendanceResult.status ===
-        "Late"
-      ) {
-
-        showResult(
-
-          "<div class='student-name-c'>" +
-            student.FullNameC +
-          "</div>" +
-
-          "<br>" +
-
-          "<div>" +
-            "🔴 迟到" +
-          "</div>" +
-
-          "<div>" +
-            "Late · Lewat" +
-          "</div>",
-
-          "error"
-
-        );
-
-
-        speak(
-          "Late. Lewat."
-        );
-
-      }
-
-
-      /*
-       * 其他状态
-       */
-
-      else {
-
-        showResult(
-
-          "<div class='student-name-c'>" +
-            student.FullNameC +
-          "</div>" +
-
-          "<br>" +
-
-          "<div>" +
-            "⚠️ " +
-            attendanceResult.status +
-          "</div>",
-
-          "error"
-
-        );
-
-      }
-
-    }
-
-
-    /*
-     * Attendance 失败
-     */
-
-    else {
-
-      showResult(
-
-        "❌ 出席记录失败<br>" +
-        "Attendance failed<br>" +
-        "Rekod kehadiran gagal",
-
-        "error"
-
-      );
-
-    }
-
-  }
-
-
-  catch (error) {
-
-    console.error(
-      "QR ERROR:",
-      error
-    );
-
-
-    showResult(
-
-      "❌ 系统错误<br>" +
-      "Ralat sistem",
-
-      "error"
-
-    );
-
-  }
-
-
-  /*
-   * 2 秒后准备下一位
-   */
-
-  setTimeout(
-
-    function() {
-
-      showResult(
-
-        "📷 等待下一位学生...<br>" +
-        "Menunggu murid seterusnya...",
-
-        "waiting"
-
-      );
-
-      isProcessing =
-        false;
-
-      lastCode =
-        "";
-
-    },
-
-    1000
-
-  );
-
-}
-/*
- * ================================
- * 初始化 Scanner
- * ================================
- */
-
-function startScanner() {
-
-  scanner =
-    new Html5Qrcode(
-      "reader"
-    );
-
-  Html5Qrcode
-    .getCameras()
-
-    .then(function(cameraList) {
-
-      console.log(
-  "CAMERAS:",
-  cameraList
-);
-      
-      cameras =
-        cameraList;
-
-      if (
-        cameras.length === 0
-      ) {
-
-        showResult(
-          "❌ 找不到相机<br>" +
-          "Tiada kamera dijumpai",
-          "error"
-        );
-
-        return;
-
-      }
-
-      const backCamera =
-        findCamera("back");
-
-      if (backCamera) {
-
-        startCamera(
-          backCamera,
-          "back"
-        );
-
-      } else {
-
-        startCamera(
-          cameras[0],
-          "front"
-        );
-
-      }
-
-    })
-
-    .catch(function(error) {
-
-      console.error(error);
-
-      showResult(
-        "❌ 无法获取相机<br>" +
-        "Tidak dapat mendapatkan kamera",
-        "error"
-      );
-
+    // 网页加载后，先加载学生数据，再启动相机
+    loadStudents().finally(() => {
+      startScanner();
     });
-
-}
-
-loadStudents()
-  .then(function() {
-    startScanner();
-  });
-</script>
-
+  </script>
 </body>
 
 </html>
