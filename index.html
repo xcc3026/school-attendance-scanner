@@ -93,6 +93,11 @@
       color: #991b1b;
     }
 
+    .late {
+      background: #fef9c3;
+      color: #92400e;
+    }
+
     .student-name-c {
       font-size: 30px;
       margin-bottom: 5px;
@@ -347,14 +352,31 @@
 
         // 逻辑判断处理
         if (attendanceResult.success) {
-          // 成功签到
-          showResult(
-            `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
-            `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
-            `<div>🟢 出席成功</div><div>Present · Hadir</div>`,
-            "success"
-          );
-          speak(`${student.FullNameC || ''} 已出席`, "zh-CN");
+          // 根据后端返回的 status 判断是迟到还是准时
+          const rawStatus = String(attendanceResult.status || "").trim();
+          const isLate = rawStatus.includes("迟") || 
+                         rawStatus.toLowerCase().includes("lewat") || 
+                         rawStatus.toLowerCase().includes("late");
+
+          if (isLate) {
+            // 🟡 迟到
+            showResult(
+              `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
+              `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
+              `<div>🟡 迟到</div><div>Lewat</div>`,
+              "late"
+            );
+            speak(`${student.FullNameC || ''}，迟到`, "zh-CN");
+          } else {
+            // 🟢 准时出席
+            showResult(
+              `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
+              `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
+              `<div>🟢 出席成功</div><div>Present · Hadir</div>`,
+              "success"
+            );
+            speak(`${student.FullNameC || ''} 已出席`, "zh-CN");
+          }
 
         } else if (attendanceResult.message && attendanceResult.message.includes("already checked in")) {
           // 重复签到
