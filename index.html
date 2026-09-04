@@ -1,192 +1,382 @@
-```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
   <title>School Attendance QR Scanner</title>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
 
+
   <style>
+
     * {
       box-sizing: border-box;
     }
 
+
     body {
+
       margin: 0;
+
       padding: 20px;
-      font-family: Arial, sans-serif;
+
+      font-family:
+        Arial,
+        "Noto Sans SC",
+        sans-serif;
+
       background: #f3f4f6;
+
       text-align: center;
+
     }
+
 
     .container {
+
       max-width: 500px;
+
       margin: auto;
+
       background: white;
+
       padding: 20px;
+
       border-radius: 18px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+      box-shadow:
+        0 4px 6px -1px rgba(0,0,0,0.1);
+
     }
+
 
     h1 {
+
+      margin-top: 0;
+
       margin-bottom: 5px;
+
     }
+
 
     .subtitle {
+
       color: #666;
+
       margin-bottom: 20px;
+
+      line-height: 1.5;
+
     }
+
 
     #reader {
+
       width: 100%;
+
       margin: auto;
+
     }
+
 
     .camera-buttons {
+
       display: flex;
+
       gap: 10px;
+
       margin-top: 15px;
+
     }
+
 
     .camera-button {
+
       flex: 1;
+
       padding: 14px 8px;
+
       border: none;
+
       border-radius: 12px;
+
       font-size: 16px;
+
       font-weight: bold;
+
       cursor: pointer;
+
       background: #e5e7eb;
+
     }
+
 
     .camera-button.active {
+
       outline: 3px solid #333;
+
       background: #d1d5db;
+
     }
+
 
     #result {
+
       margin-top: 20px;
+
       padding: 20px;
+
       border-radius: 12px;
+
       font-size: 18px;
+
       font-weight: bold;
+
       min-height: 150px;
+
       display: flex;
+
       align-items: center;
+
       justify-content: center;
+
       flex-direction: column;
+
+      line-height: 1.5;
+
+      word-break: break-word;
+
     }
+
 
     .waiting {
+
       background: #f3f4f6;
+
       color: #555;
+
     }
+
 
     .success {
+
       background: #dcfce7;
+
       color: #166534;
+
     }
+
 
     .error {
+
       background: #fee2e2;
+
       color: #991b1b;
+
     }
+
 
     .late {
+
       background: #fef9c3;
+
       color: #92400e;
+
     }
+
 
     .student-name-c {
+
       font-size: 30px;
+
       margin-bottom: 5px;
+
     }
+
+
+    .student-name-en {
+
+      font-size: 16px;
+
+      color: #4b5563;
+
+      font-weight: normal;
+
+    }
+
 
     .student-info {
+
       font-size: 16px;
+
       color: #4b5563;
+
       margin-top: 5px;
+
+      font-weight: normal;
+
     }
+
 
     .attendance-time {
+
       font-size: 14px;
-      margin-top: 5px;
+
+      margin-top: 8px;
+
+      font-weight: normal;
+
     }
 
+
     .already-status {
-      font-size: 18px;
+
+      font-size: 20px;
+
       margin-top: 8px;
+
     }
+
+
+    .debug-code {
+
+      margin-top: 12px;
+
+      font-size: 12px;
+
+      color: #6b7280;
+
+      font-weight: normal;
+
+      word-break: break-all;
+
+    }
+
+
+    .system-status {
+
+      margin-top: 10px;
+
+      font-size: 12px;
+
+      color: #777;
+
+      font-weight: normal;
+
+    }
+
   </style>
+
 </head>
+
 
 <body>
 
+
   <div class="container">
 
-    <h1>🏫 School Attendance</h1>
+
+    <h1>
+      🏫 School Attendance
+    </h1>
+
 
     <div class="subtitle">
-      扫描学生 QR Code<br>
-      <b>Imbas QR Kod Murid</b>
+
+      扫描学生 QR Code
+
+      <br>
+
+      <b>
+        Imbas QR Kod Murid
+      </b>
+
     </div>
+
 
     <div id="reader"></div>
 
+
     <div class="camera-buttons">
+
 
       <button
         id="backButton"
         class="camera-button"
         onclick="changeCamera('back')"
       >
-        📷 后置镜头<br>
+
+        📷 后置镜头
+
+        <br>
+
         Kamera Belakang
+
       </button>
+
 
       <button
         id="frontButton"
         class="camera-button"
         onclick="changeCamera('front')"
       >
-        🤳 前置镜头<br>
+
+        🤳 前置镜头
+
+        <br>
+
         Kamera Hadapan
+
       </button>
 
+
     </div>
 
-    <div id="result" class="waiting">
-      📷 等待扫描...<br>
-      Menunggu imbasan...
+
+    <div
+      id="result"
+      class="waiting"
+    >
+
+      ⏳ 正在加载学生资料...
+
+      <br>
+
+      Memuatkan maklumat murid...
+
     </div>
+
 
   </div>
 
 
   <script>
 
+
     /*
      * =========================================================
-     * CONFIG
+     * API
      * =========================================================
      */
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
+    const API_URL =
+      "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
 
 
     /*
+     * =========================================================
      * 迟到时间
      *
      * 06:46 开始 = Late
-     *
-     * 例如：
-     * 06:44 → Present
-     * 06:45 → Present
-     * 06:46 → Late
-     * 07:00 → Late
+     * =========================================================
      */
 
     const LATE_TIME_MINUTES =
@@ -195,54 +385,35 @@
 
     /*
      * =========================================================
-     * GLOBAL VARIABLES
+     * GLOBAL
      * =========================================================
      */
 
     let studentCache = {};
 
-    /*
-     * 今天本页面已经扫描过的学生
-     */
-    let localCheckedSet = new Set();
+    let localCheckedSet =
+      new Set();
 
+    let attendanceStatusMap =
+      {};
 
-    /*
-     * 保存学生今天第一次打卡的最终状态
-     *
-     * 例如：
-     *
-     * {
-     *   "S001": {
-     *      status: "Present",
-     *      time: "06:42:10"
-     *   }
-     * }
-     *
-     * 或：
-     *
-     * {
-     *   "S002": {
-     *      status: "Late",
-     *      time: "06:52:03"
-     *   }
-     * }
-     */
+    let scanner =
+      null;
 
-    let attendanceStatusMap = {};
+    let cameras =
+      [];
 
+    let currentCamera =
+      null;
 
-    let scanner = null;
+    let lastCode =
+      "";
 
-    let cameras = [];
+    let isProcessing =
+      false;
 
-    let currentCamera = null;
-
-    let lastCode = "";
-
-    let isProcessing = false;
-
-    let isSwitching = false;
+    let isSwitching =
+      false;
 
 
     /*
@@ -251,14 +422,22 @@
      * =========================================================
      */
 
-    function showResult(message, type) {
+    function showResult(
+      message,
+      type
+    ) {
 
       const result =
-        document.getElementById("result");
+        document.getElementById(
+          "result"
+        );
 
-      result.className = type;
+      result.className =
+        type;
 
-      result.innerHTML = message;
+      result.innerHTML =
+        message;
+
     }
 
 
@@ -268,24 +447,94 @@
      * =========================================================
      */
 
-    function speak(text, language = "zh-CN") {
+    function speak(
+      text,
+      language = "zh-CN"
+    ) {
 
-      if (!("speechSynthesis" in window)) {
+      if (
+        !("speechSynthesis" in window)
+      ) {
+
         return;
+
       }
 
-      window.speechSynthesis.cancel();
 
-      const speech =
-        new SpeechSynthesisUtterance(text);
+      try {
 
-      speech.lang = language;
+        window.speechSynthesis.cancel();
 
-      speech.rate = 1.2;
+        const speech =
+          new SpeechSynthesisUtterance(
+            text
+          );
 
-      speech.pitch = 1;
+        speech.lang =
+          language;
 
-      window.speechSynthesis.speak(speech);
+        speech.rate =
+          1.15;
+
+        speech.pitch =
+          1;
+
+        window.speechSynthesis.speak(
+          speech
+        );
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Speech error:",
+          error
+        );
+
+      }
+
+    }
+
+
+    /*
+     * =========================================================
+     * NORMALIZE QR
+     *
+     * 处理：
+     *
+     * 01685/23
+     * 01685/23 空格
+     * 大小写
+     * 隐藏换行
+     * =========================================================
+     */
+
+    function normalizeCode(
+      value
+    ) {
+
+      if (
+        value === null ||
+        value === undefined
+      ) {
+
+        return "";
+
+      }
+
+
+      return String(value)
+
+        .trim()
+
+        .replace(
+          /\s+/g,
+          ""
+        )
+
+        .toUpperCase();
+
     }
 
 
@@ -295,73 +544,119 @@
      * =========================================================
      */
 
-    function findCamera(type) {
+    function findCamera(
+      type
+    ) {
 
-      if (type === "back") {
+      if (
+        type === "back"
+      ) {
 
-        return cameras.find(c => {
+        return cameras.find(
+          camera => {
 
-          const label =
-            (c.label || "").toLowerCase();
+            const label =
+              (
+                camera.label ||
+                ""
+              ).toLowerCase();
 
-          return (
-            label.includes("back") ||
-            label.includes("rear") ||
-            label.includes("environment")
-          );
 
-        });
+            return (
+
+              label.includes("back") ||
+
+              label.includes("rear") ||
+
+              label.includes("environment") ||
+
+              label.includes("后置")
+
+            );
+
+          }
+        );
 
       }
 
 
-      if (type === "front") {
+      if (
+        type === "front"
+      ) {
 
-        return cameras.find(c => {
+        return cameras.find(
+          camera => {
 
-          const label =
-            (c.label || "").toLowerCase();
+            const label =
+              (
+                camera.label ||
+                ""
+              ).toLowerCase();
 
-          return (
-            label.includes("front") ||
-            label.includes("user")
-          );
 
-        });
+            return (
+
+              label.includes("front") ||
+
+              label.includes("user") ||
+
+              label.includes("前置")
+
+            );
+
+          }
+        );
 
       }
+
 
       return null;
+
     }
 
 
-    function updateCameraButtons(type) {
+    function updateCameraButtons(
+      type
+    ) {
 
       document
-        .getElementById("backButton")
+        .getElementById(
+          "backButton"
+        )
         .classList
         .remove("active");
 
+
       document
-        .getElementById("frontButton")
+        .getElementById(
+          "frontButton"
+        )
         .classList
         .remove("active");
 
 
-      if (type === "back") {
+      if (
+        type === "back"
+      ) {
 
         document
-          .getElementById("backButton")
+          .getElementById(
+            "backButton"
+          )
           .classList
           .add("active");
 
       }
 
 
-      if (type === "front") {
+      if (
+        type === "front"
+      ) {
 
         document
-          .getElementById("frontButton")
+          .getElementById(
+            "frontButton"
+          )
           .classList
           .add("active");
 
@@ -370,18 +665,37 @@
     }
 
 
-    function startCamera(camera, type) {
+    function startCamera(
+      camera,
+      type
+    ) {
+
+      if (
+        !scanner
+      ) {
+
+        scanner =
+          new Html5Qrcode(
+            "reader"
+          );
+
+      }
+
 
       const config = {
 
         fps: 20,
 
         qrbox: {
+
           width: 220,
+
           height: 220
+
         },
 
-        rememberLastUsedCamera: true
+        rememberLastUsedCamera:
+          true
 
       };
 
@@ -395,7 +709,9 @@
 
           decodedText => {
 
-            handleQR(decodedText);
+            handleQR(
+              decodedText
+            );
 
           },
 
@@ -405,11 +721,20 @@
 
         .then(() => {
 
-          currentCamera = type;
+          currentCamera =
+            type;
 
-          updateCameraButtons(type);
+          updateCameraButtons(
+            type
+          );
 
-          isSwitching = false;
+          isSwitching =
+            false;
+
+          console.log(
+            "Camera started:",
+            type
+          );
 
         })
 
@@ -420,12 +745,19 @@
             error
           );
 
-          isSwitching = false;
+          isSwitching =
+            false;
 
           showResult(
+
             "❌ 无法开启相机<br>" +
-            "Tidak dapat membuka kamera",
+
+            "Tidak dapat membuka kamera<br>" +
+
+            `<div class="system-status">${escapeHtml(String(error))}</div>`,
+
             "error"
+
           );
 
         });
@@ -433,13 +765,17 @@
     }
 
 
-    function changeCamera(type) {
+    function changeCamera(
+      type
+    ) {
 
       if (
         isSwitching ||
         currentCamera === type
       ) {
+
         return;
+
       }
 
 
@@ -450,16 +786,22 @@
       if (!camera) {
 
         showResult(
+
           "⚠️ 找不到此相机<br>" +
+
           "Kamera tidak dijumpai",
+
           "error"
+
         );
 
         return;
+
       }
 
 
-      isSwitching = true;
+      isSwitching =
+        true;
 
 
       if (
@@ -468,14 +810,31 @@
       ) {
 
         scanner
-          .stop()
 
-          .then(() => scanner.clear())
+          .stop()
 
           .then(() => {
 
+            try {
+
+              scanner.clear();
+
+            }
+
+            catch (e) {
+
+              console.warn(
+                e
+              );
+
+            }
+
+
             scanner =
-              new Html5Qrcode("reader");
+              new Html5Qrcode(
+                "reader"
+              );
+
 
             startCamera(
               camera,
@@ -486,15 +845,23 @@
 
           .catch(error => {
 
-            console.error(error);
+            console.error(
+              error
+            );
 
-            isSwitching = false;
+            isSwitching =
+              false;
 
           });
 
       }
 
       else {
+
+        scanner =
+          new Html5Qrcode(
+            "reader"
+          );
 
         startCamera(
           camera,
@@ -508,7 +875,7 @@
 
     /*
      * =========================================================
-     * LOAD STUDENTS
+     * LOAD ALL STUDENTS
      * =========================================================
      */
 
@@ -517,9 +884,13 @@
       try {
 
         showResult(
-          "⏳ 正在预加载全校学生资料...<br>" +
-          "Memuatkan maklumat murid...",
+
+          "⏳ 正在加载全校学生资料...<br>" +
+
+          "Memuatkan maklumat semua murid...",
+
           "waiting"
+
         );
 
 
@@ -528,14 +899,29 @@
           "?action=students";
 
 
+        console.log(
+          "Loading students:",
+          url
+        );
+
+
         const response =
-          await fetch(url);
+          await fetch(
+            url,
+            {
+              method: "GET",
+              cache: "no-store"
+            }
+          );
 
 
-        if (!response.ok) {
+        if (
+          !response.ok
+        ) {
 
           throw new Error(
-            "Network error loading students"
+            "HTTP " +
+            response.status
           );
 
         }
@@ -548,7 +934,9 @@
         if (
           !result ||
           result.success !== true ||
-          !Array.isArray(result.students)
+          !Array.isArray(
+            result.students
+          )
         ) {
 
           throw new Error(
@@ -558,47 +946,84 @@
         }
 
 
-        studentCache = {};
+        studentCache =
+          {};
 
 
-        result.students.forEach(student => {
+        result.students.forEach(
+          student => {
 
-          /*
-           * Barcode
-           */
+            if (
+              student.Barcode
+            ) {
 
-          if (student.Barcode) {
+              const barcode =
+                normalizeCode(
+                  student.Barcode
+                );
 
-            studentCache[
-              String(student.Barcode)
-                .trim()
-                .toUpperCase()
-            ] = student;
+
+              if (
+                barcode
+              ) {
+
+                studentCache[
+                  barcode
+                ] =
+                  student;
+
+              }
+
+            }
+
+
+            if (
+              student.StudentID
+            ) {
+
+              const studentID =
+                normalizeCode(
+                  student.StudentID
+                );
+
+
+              if (
+                studentID
+              ) {
+
+                studentCache[
+                  studentID
+                ] =
+                  student;
+
+              }
+
+            }
 
           }
+        );
 
 
-          /*
-           * StudentID
-           */
+        const totalStudents =
+          result.students.length;
 
-          if (student.StudentID) {
 
-            studentCache[
-              String(student.StudentID)
-                .trim()
-                .toUpperCase()
-            ] = student;
-
-          }
-
-        });
+        console.log(
+          "Students loaded:",
+          totalStudents
+        );
 
 
         showResult(
+
           "✅ 学生资料已就绪<br>" +
-          "Sedia untuk diimbas",
+
+          "Sedia untuk diimbas<br>" +
+
+          `<div class="system-status">${totalStudents} 名学生资料已加载</div>`,
+
           "success"
+
         );
 
 
@@ -613,9 +1038,15 @@
 
 
         showResult(
-          "⚠️ 缓存加载失败，将自动依赖网络查询<br>" +
-          "Mod dalam talian",
+
+          "⚠️ 学生资料预加载失败<br>" +
+
+          "系统将使用在线查询<br>" +
+
+          `<div class="system-status">错误：${escapeHtml(error.message || String(error))}</div>`,
+
           "waiting"
+
         );
 
       }
@@ -625,20 +1056,31 @@
 
     /*
      * =========================================================
-     * GET STUDENT FROM CACHE
+     * CACHE LOOKUP
      * =========================================================
      */
 
-    function getStudentFromCache(qrCode) {
+    function getStudentFromCache(
+      qrCode
+    ) {
 
-      const cleanCode =
-        String(qrCode)
-          .trim()
-          .toUpperCase();
+      const code =
+        normalizeCode(
+          qrCode
+        );
+
+
+      if (
+        !code
+      ) {
+
+        return null;
+
+      }
 
 
       return (
-        studentCache[cleanCode] ||
+        studentCache[code] ||
         null
       );
 
@@ -647,7 +1089,49 @@
 
     /*
      * =========================================================
+     * HTML ESCAPE
+     * =========================================================
+     */
+
+    function escapeHtml(
+      value
+    ) {
+
+      return String(value)
+
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+
+        .replace(
+          /</g,
+          "&lt;"
+        )
+
+        .replace(
+          />/g,
+          "&gt;"
+        )
+
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+    /*
+     * =========================================================
      * TIME
+     *
+     * 06:46 = Late
      * =========================================================
      */
 
@@ -661,7 +1145,7 @@
         now.getHours();
 
 
-      const mins =
+      const minutes =
         now.getMinutes();
 
 
@@ -670,7 +1154,8 @@
 
 
       const totalMinutes =
-        hours * 60 + mins;
+        hours * 60 +
+        minutes;
 
 
       const isLate =
@@ -679,16 +1164,22 @@
 
 
       const timeStr =
-        [
-          String(hours).padStart(2, "0"),
-          String(mins).padStart(2, "0"),
-          String(seconds).padStart(2, "0")
-        ].join(":");
+
+        String(hours)
+          .padStart(2, "0")
+
+        + ":" +
+
+        String(minutes)
+          .padStart(2, "0")
+
+        + ":" +
+
+        String(seconds)
+          .padStart(2, "0");
 
 
       return {
-
-        isLate: isLate,
 
         status:
           isLate
@@ -705,7 +1196,115 @@
 
     /*
      * =========================================================
-     * DISPLAY FIRST ATTENDANCE
+     * NORMALIZE ATTENDANCE STATUS
+     * =========================================================
+     */
+
+    function normalizeAttendanceStatus(
+      status
+    ) {
+
+      const value =
+        String(status || "")
+          .trim()
+          .toLowerCase();
+
+
+      if (
+
+        value === "late" ||
+
+        value === "lewat" ||
+
+        value.includes("迟到")
+
+      ) {
+
+        return "Late";
+
+      }
+
+
+      if (
+
+        value === "present" ||
+
+        value === "hadir" ||
+
+        value.includes("出席") ||
+
+        value.includes("准时")
+
+      ) {
+
+        return "Present";
+
+      }
+
+
+      return null;
+
+    }
+
+
+    /*
+     * =========================================================
+     * STUDENT DISPLAY
+     * =========================================================
+     */
+
+    function getStudentNameC(
+      student
+    ) {
+
+      return escapeHtml(
+        student.FullNameC ||
+        student.FullName ||
+        "学生"
+      );
+
+    }
+
+
+    function getStudentNameEN(
+      student
+    ) {
+
+      return escapeHtml(
+        student.FullName ||
+        ""
+      );
+
+    }
+
+
+    function getStudentClass(
+      student
+    ) {
+
+      return escapeHtml(
+        student.Class ||
+        ""
+      );
+
+    }
+
+
+    function getStudentID(
+      student
+    ) {
+
+      return escapeHtml(
+        student.StudentID ||
+        ""
+      );
+
+    }
+
+
+    /*
+     * =========================================================
+     * FIRST ATTENDANCE
      * =========================================================
      */
 
@@ -714,25 +1313,29 @@
       attendanceInfo
     ) {
 
-      const studentName =
-        student.FullNameC ||
-        student.FullName ||
-        "学生";
+      const nameC =
+        getStudentNameC(
+          student
+        );
+
+
+      const nameEN =
+        getStudentNameEN(
+          student
+        );
 
 
       const studentClass =
-        student.Class ||
-        "";
+        getStudentClass(
+          student
+        );
 
 
       const studentID =
-        student.StudentID ||
-        "";
+        getStudentID(
+          student
+        );
 
-
-      /*
-       * Late
-       */
 
       if (
         attendanceInfo.status ===
@@ -741,20 +1344,24 @@
 
         showResult(
 
-          `<div class='student-name-c'>` +
-          `${studentName}` +
-          `</div>` +
+          `<div class="student-name-c">${nameC}</div>` +
 
-          `<div class='student-info'>` +
+          `<div class="student-name-en">${nameEN}</div>` +
+
+          `<div class="student-info">` +
+
           `${studentClass} · ${studentID}` +
+
           `</div>` +
 
           `<br>` +
 
           `<div>🟡 迟到 Lewat</div>` +
 
-          `<div class='attendance-time'>` +
-          `打卡时间: ${attendanceInfo.time}` +
+          `<div class="attendance-time">` +
+
+          `打卡时间：${attendanceInfo.time}` +
+
           `</div>`,
 
           "late"
@@ -763,35 +1370,34 @@
 
 
         speak(
-          `${studentName}，注意，你今天迟到了`,
+          `${student.FullNameC || student.FullName || "学生"}，注意，你今天迟到了`,
           "zh-CN"
         );
 
       }
 
-
-      /*
-       * Present
-       */
-
       else {
 
         showResult(
 
-          `<div class='student-name-c'>` +
-          `${studentName}` +
-          `</div>` +
+          `<div class="student-name-c">${nameC}</div>` +
 
-          `<div class='student-info'>` +
+          `<div class="student-name-en">${nameEN}</div>` +
+
+          `<div class="student-info">` +
+
           `${studentClass} · ${studentID}` +
+
           `</div>` +
 
           `<br>` +
 
           `<div>🟢 准时出席 Hadir</div>` +
 
-          `<div class='attendance-time'>` +
-          `打卡时间: ${attendanceInfo.time}` +
+          `<div class="attendance-time">` +
+
+          `打卡时间：${attendanceInfo.time}` +
+
           `</div>`,
 
           "success"
@@ -800,7 +1406,7 @@
 
 
         speak(
-          `${studentName}，打卡成功`,
+          `${student.FullNameC || student.FullName || "学生"}，打卡成功`,
           "zh-CN"
         );
 
@@ -811,7 +1417,7 @@
 
     /*
      * =========================================================
-     * DISPLAY ALREADY CHECKED
+     * ALREADY CHECKED
      * =========================================================
      */
 
@@ -820,76 +1426,86 @@
       attendanceInfo
     ) {
 
-      const studentName =
-        student.FullNameC ||
-        student.FullName ||
-        "学生";
+      const nameC =
+        getStudentNameC(
+          student
+        );
+
+
+      const nameEN =
+        getStudentNameEN(
+          student
+        );
 
 
       const studentClass =
-        student.Class ||
-        "";
+        getStudentClass(
+          student
+        );
 
 
       const studentID =
-        student.StudentID ||
-        "";
+        getStudentID(
+          student
+        );
 
-
-      /*
-       * 如果后台已经知道状态，
-       * 使用后台返回的状态。
-       *
-       * 如果后台没有提供状态，
-       * 使用第一次扫码时保存的状态。
-       */
 
       const status =
         attendanceInfo &&
         attendanceInfo.status
-          ? attendanceInfo.status
+          ? normalizeAttendanceStatus(
+              attendanceInfo.status
+            )
           : "Present";
 
 
       const time =
         attendanceInfo &&
         attendanceInfo.time
-          ? attendanceInfo.time
+          ? escapeHtml(
+              attendanceInfo.time
+            )
           : "";
 
 
-      /*
-       * Late
-       */
-
-      if (status === "Late") {
+      if (
+        status === "Late"
+      ) {
 
         showResult(
 
-          `<div class='student-name-c'>` +
-          `${studentName}` +
-          `</div>` +
+          `<div class="student-name-c">${nameC}</div>` +
 
-          `<div class='student-info'>` +
+          `<div class="student-name-en">${nameEN}</div>` +
+
+          `<div class="student-info">` +
+
           `${studentClass} · ${studentID}` +
+
           `</div>` +
 
           `<br>` +
 
-          `<div class='already-status'>` +
+          `<div class="already-status">` +
+
           `⚠️ 今日已打卡 · 迟到` +
+
           `</div>` +
 
-          `<div>` +
-          `Sudah hadir · Lewat` +
-          `</div>` +
+          `<div>Sudah hadir · Lewat</div>` +
 
           (
+
             time
-              ? `<div class='attendance-time'>` +
-                `原打卡时间: ${time}` +
+
+              ? `<div class="attendance-time">` +
+
+                `原打卡时间：${time}` +
+
                 `</div>`
+
               : ""
+
           ),
 
           "late"
@@ -898,45 +1514,48 @@
 
 
         speak(
-          `${studentName}，今天已经打卡，你迟到了`,
+          `${student.FullNameC || student.FullName || "学生"}，今天已经打卡，你迟到了`,
           "zh-CN"
         );
 
       }
 
-
-      /*
-       * Present
-       */
-
       else {
 
         showResult(
 
-          `<div class='student-name-c'>` +
-          `${studentName}` +
-          `</div>` +
+          `<div class="student-name-c">${nameC}</div>` +
 
-          `<div class='student-info'>` +
+          `<div class="student-name-en">${nameEN}</div>` +
+
+          `<div class="student-info">` +
+
           `${studentClass} · ${studentID}` +
+
           `</div>` +
 
           `<br>` +
 
-          `<div class='already-status'>` +
+          `<div class="already-status">` +
+
           `⚠️ 今日已打卡 · 准时` +
+
           `</div>` +
 
-          `<div>` +
-          `Sudah hadir · Tepat pada masa` +
-          `</div>` +
+          `<div>Sudah hadir · Tepat pada masa</div>` +
 
           (
+
             time
-              ? `<div class='attendance-time'>` +
-                `原打卡时间: ${time}` +
+
+              ? `<div class="attendance-time">` +
+
+                `原打卡时间：${time}` +
+
                 `</div>`
+
               : ""
+
           ),
 
           "error"
@@ -945,7 +1564,7 @@
 
 
         speak(
-          `${studentName}，今天已经打卡`,
+          `${student.FullNameC || student.FullName || "学生"}，今天已经打卡`,
           "zh-CN"
         );
 
@@ -956,18 +1575,35 @@
 
     /*
      * =========================================================
-     * CORE QR PROCESSING
+     * QR PROCESSING
      * =========================================================
      */
 
-    async function handleQR(qrCode) {
+    async function handleQR(
+      qrCode
+    ) {
 
-      /*
-       * 防止相机连续重复触发
-       */
+      if (
+        isProcessing
+      ) {
 
-      if (isProcessing) {
         return;
+
+      }
+
+
+      const cleanCode =
+        normalizeCode(
+          qrCode
+        );
+
+
+      if (
+        !cleanCode
+      ) {
+
+        return;
+
       }
 
 
@@ -976,47 +1612,58 @@
        */
 
       if (
-        qrCode === lastCode
+        cleanCode ===
+        lastCode
       ) {
+
         return;
+
       }
 
 
-      isProcessing = true;
+      isProcessing =
+        true;
 
-      lastCode = qrCode;
+      lastCode =
+        cleanCode;
 
 
-      /*
-       * 清理 QR
-       */
+      console.log(
+        "QR SCANNED:",
+        qrCode
+      );
 
-      const cleanCode =
-        String(qrCode)
-          .trim()
-          .toUpperCase();
+      console.log(
+        "QR NORMALIZED:",
+        cleanCode
+      );
 
 
       /*
        * =====================================================
-       * 1. CACHE LOOKUP
+       * 1. 本地缓存
        * =====================================================
        */
 
       const student =
-        getStudentFromCache(cleanCode);
+        getStudentFromCache(
+          cleanCode
+        );
 
 
       /*
        * =====================================================
-       * 2. 找不到缓存学生
+       * 2. 找不到 → 在线查询
        * =====================================================
        */
 
-      if (!student) {
+      if (
+        !student
+      ) {
 
         await handleOnlineStudentLookup(
-          cleanCode
+          cleanCode,
+          qrCode
         );
 
         return;
@@ -1026,57 +1673,43 @@
 
       /*
        * =====================================================
-       * 3. STUDENT KEY
+       * 3. Student Key
        * =====================================================
        */
 
       const studentKey =
-        String(
+        normalizeCode(
           student.StudentID ||
           cleanCode
-        )
-        .trim()
-        .toUpperCase();
+        );
 
 
       /*
        * =====================================================
-       * 4. 今天本页面已经扫过
-       *
-       * 第二次扫码不再显示：
-       *
-       * ❌ 今天已点过名
-       *
-       * 而是显示：
-       *
-       * ⚠️ 今日已打卡 · 准时
-       *
-       * 或：
-       *
-       * ⚠️ 今日已打卡 · 迟到
+       * 4. 本页面已经扫描过
        * =====================================================
        */
 
       if (
-        localCheckedSet.has(studentKey)
+        localCheckedSet.has(
+          studentKey
+        )
       ) {
 
-        const savedAttendance =
+        showAlreadyChecked(
+
+          student,
+
           attendanceStatusMap[
             studentKey
-          ];
+          ]
 
-
-        showAlreadyChecked(
-          student,
-          savedAttendance
         );
 
 
         resetScannerLock(
           1500
         );
-
 
         return;
 
@@ -1094,12 +1727,7 @@
 
 
       /*
-       * 先保存本次状态
-       *
-       * 这样即使后台稍后才回来，
-       * 第二次扫码仍然知道：
-       *
-       * Present / Late
+       * 先保存本地状态
        */
 
       attendanceStatusMap[
@@ -1115,10 +1743,6 @@
       };
 
 
-      /*
-       * 标记今天已经扫过
-       */
-
       localCheckedSet.add(
         studentKey
       );
@@ -1126,7 +1750,7 @@
 
       /*
        * =====================================================
-       * 6. 立即显示 Present / Late
+       * 6. 立即显示
        * =====================================================
        */
 
@@ -1138,16 +1762,12 @@
 
       /*
        * =====================================================
-       * 7. 后台静默提交
-       *
-       * 不等待网络，
-       * 所以不会拖慢下一位学生。
+       * 7. 后台提交
        * =====================================================
        */
 
-      sendAttendanceAsync(
-        student.StudentID,
-        student.Class,
+      sendAttendance(
+        student,
         studentKey,
         attendanceInfo
       );
@@ -1168,26 +1788,23 @@
 
     /*
      * =========================================================
-     * ONLINE LOOKUP
+     * ONLINE STUDENT LOOKUP
      * =========================================================
-     *
-     * 如果学生资料没有预加载成功，
-     * 自动使用：
-     *
-     * action=student
-     *
-     * 查询学生。
-     *
      */
 
     async function handleOnlineStudentLookup(
-      cleanCode
+      cleanCode,
+      originalCode
     ) {
 
       showResult(
-        "🔍 正在在线查询学生...<br>" +
+
+        "🔍 正在查询学生资料...<br>" +
+
         "Mencari murid...",
+
         "waiting"
+
       );
 
 
@@ -1195,18 +1812,37 @@
 
         const url =
           API_URL +
+
           "?action=student&barcode=" +
-          encodeURIComponent(cleanCode);
+
+          encodeURIComponent(
+            cleanCode
+          );
+
+
+        console.log(
+          "ONLINE LOOKUP:",
+          url
+        );
 
 
         const response =
-          await fetch(url);
+          await fetch(
+            url,
+            {
+              method: "GET",
+              cache: "no-store"
+            }
+          );
 
 
-        if (!response.ok) {
+        if (
+          !response.ok
+        ) {
 
           throw new Error(
-            "Network response was not OK"
+            "HTTP " +
+            response.status
           );
 
         }
@@ -1216,59 +1852,67 @@
           await response.json();
 
 
+        console.log(
+          "ONLINE RESULT:",
+          result
+        );
+
+
         /*
          * 找到学生
          */
 
         if (
           result &&
-          result.success &&
+          result.success === true &&
           result.student
         ) {
 
-          const st =
+          const student =
             result.student;
 
 
           /*
            * 加入缓存
-           *
-           * 下一次扫描就不需要重新查询。
            */
 
-          if (st.Barcode) {
+          if (
+            student.Barcode
+          ) {
 
             studentCache[
-              String(st.Barcode)
-                .trim()
-                .toUpperCase()
-            ] = st;
+              normalizeCode(
+                student.Barcode
+              )
+            ] =
+              student;
 
           }
 
 
-          if (st.StudentID) {
+          if (
+            student.StudentID
+          ) {
 
             studentCache[
-              String(st.StudentID)
-                .trim()
-                .toUpperCase()
-            ] = st;
+              normalizeCode(
+                student.StudentID
+              )
+            ] =
+              student;
 
           }
 
 
           const studentKey =
-            String(
-              st.StudentID ||
+            normalizeCode(
+              student.StudentID ||
               cleanCode
-            )
-            .trim()
-            .toUpperCase();
+            );
 
 
           /*
-           * 如果已经扫过
+           * 第二次
            */
 
           if (
@@ -1278,10 +1922,13 @@
           ) {
 
             showAlreadyChecked(
-              st,
+
+              student,
+
               attendanceStatusMap[
                 studentKey
               ]
+
             );
 
 
@@ -1289,14 +1936,13 @@
               1500
             );
 
-
             return;
 
           }
 
 
           /*
-           * 第一次扫码
+           * 第一次
            */
 
           const attendanceInfo =
@@ -1321,77 +1967,89 @@
           );
 
 
-          /*
-           * 显示
-           */
-
           showFirstAttendance(
-            st,
+            student,
             attendanceInfo
           );
 
 
-          /*
-           * 后台提交
-           */
-
-          sendAttendanceAsync(
-            st.StudentID,
-            st.Class,
+          sendAttendance(
+            student,
             studentKey,
             attendanceInfo
           );
 
 
+          resetScannerLock(
+            1200
+          );
+
+
+          return;
+
         }
+
 
         /*
-         * 找不到学生
+         * 学生不存在
          */
 
-        else {
+        showResult(
 
-          showResult(
-            "❌ 找不到学生资料<br>" +
-            "Murid tidak dijumpai",
-            "error"
-          );
+          "❌ 找不到学生资料<br>" +
+
+          "Murid tidak dijumpai<br>" +
+
+          `<div class="debug-code">扫描内容：${escapeHtml(originalCode)}</div>`,
+
+          "error"
+
+        );
 
 
-          speak(
-            "找不到学生",
-            "zh-CN"
-          );
+        speak(
+          "找不到学生",
+          "zh-CN"
+        );
 
-        }
 
       }
 
-
-      catch (err) {
+      catch (error) {
 
         console.error(
           "ONLINE LOOKUP ERROR:",
-          err
+          error
         );
 
 
+        /*
+         * 这里不再简单写：
+         *
+         * 网络连接失败
+         *
+         * 而是告诉我们真正是什么错误。
+         */
+
         showResult(
-          "❌ 网络连接失败<br>" +
-          "Ralat Rangkaian",
+
+          "❌ 在线查询失败<br>" +
+
+          "Gagal mencari secara dalam talian<br>" +
+
+          `<div class="debug-code">扫描内容：${escapeHtml(originalCode)}</div>` +
+
+          `<div class="system-status">错误：${escapeHtml(error.message || String(error))}</div>`,
+
           "error"
+
         );
 
       }
 
 
-      /*
-       * 网络查询比缓存慢一点，
-       * 所以给 1.8 秒。
-       */
-
       resetScannerLock(
-        1800
+        2000
       );
 
     }
@@ -1399,275 +2057,257 @@
 
     /*
      * =========================================================
-     * BACKGROUND ATTENDANCE
+     * SEND ATTENDANCE
+     *
+     * 对应 Code.gs：
+     *
+     * action=attendance
+     *
+     * 实际调用：
+     *
+     * recordAttendance()
+     *
      * =========================================================
-     *
-     * Fire and forget
-     *
-     * 前台已经显示 Present / Late，
-     * 这里才慢慢把资料送到 Google Apps Script。
-     *
      */
 
-    function sendAttendanceAsync(
-      studentID,
-      studentClass,
+    function sendAttendance(
+      student,
       studentKey,
       localAttendanceInfo
     ) {
 
+      const studentID =
+        student.StudentID ||
+        studentKey;
+
+
+      const studentClass =
+        student.Class ||
+        "";
+
+
       const attendanceUrl =
+
         API_URL +
+
         "?action=attendance" +
+
         "&studentID=" +
+
         encodeURIComponent(
           studentID
         ) +
+
         "&class=" +
+
         encodeURIComponent(
-          studentClass || ""
-        );
+          studentClass
+        ) +
+
+        "&method=QR";
 
 
-      fetch(attendanceUrl)
-
-        .then(res => {
-
-          if (!res.ok) {
-
-            throw new Error(
-              "Attendance network response was not OK"
-            );
-
-          }
-
-          return res.json();
-
-        })
-
-        .then(resData => {
-
-          console.log(
-            "后台打卡响应:",
-            resData
-          );
+      console.log(
+        "ATTENDANCE URL:",
+        attendanceUrl
+      );
 
 
-          /*
-           * =================================================
-           * 后台已经有记录
-           *
-           * 如果 Apps Script 返回：
-           *
-           * success:false
-           * message:"already checked in"
-           *
-           * 我们不会把第一次的状态改掉。
-           *
-           * 因为第一次扫码时我们已经根据
-           * 06:46 正确判断 Present / Late。
-           * =================================================
-           */
+      fetch(
+        attendanceUrl,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      )
 
-          if (
-            resData &&
-            resData.success === false
-          ) {
-
-            const message =
-              String(
-                resData.message || ""
-              ).toLowerCase();
-
+        .then(
+          response => {
 
             if (
-              message.includes(
-                "already checked in"
-              ) ||
-              message.includes(
-                "already"
-              ) ||
-              message.includes(
-                "sudah hadir"
-              )
+              !response.ok
             ) {
 
-              console.warn(
-                "后台显示今天已经打卡"
+              throw new Error(
+                "HTTP " +
+                response.status
               );
 
             }
 
-          }
 
-
-          /*
-           * =================================================
-           * 如果后台 API 有返回 status，
-           * 就使用后台最终状态。
-           *
-           * 兼容几种常见字段：
-           *
-           * status
-           * attendanceStatus
-           * data.status
-           * attendance.status
-           * =================================================
-           */
-
-          let backendStatus = null;
-
-
-          if (
-            resData &&
-            typeof resData.status === "string"
-          ) {
-
-            backendStatus =
-              normalizeAttendanceStatus(
-                resData.status
-              );
+            return response.json();
 
           }
+        )
 
-
-          if (
-            !backendStatus &&
-            resData &&
-            typeof resData.attendanceStatus === "string"
-          ) {
-
-            backendStatus =
-              normalizeAttendanceStatus(
-                resData.attendanceStatus
-              );
-
-          }
-
-
-          if (
-            !backendStatus &&
-            resData &&
-            resData.data &&
-            typeof resData.data.status === "string"
-          ) {
-
-            backendStatus =
-              normalizeAttendanceStatus(
-                resData.data.status
-              );
-
-          }
-
-
-          if (
-            !backendStatus &&
-            resData &&
-            resData.attendance &&
-            typeof resData.attendance.status === "string"
-          ) {
-
-            backendStatus =
-              normalizeAttendanceStatus(
-                resData.attendance.status
-              );
-
-          }
-
-
-          /*
-           * 如果后台明确返回状态，
-           * 更新本地保存的最终状态。
-           */
-
-          if (backendStatus) {
-
-            attendanceStatusMap[
-              studentKey
-            ] = {
-
-              status:
-                backendStatus,
-
-              time:
-                localAttendanceInfo.time
-
-            };
-
+        .then(
+          data => {
 
             console.log(
-              "后台最终状态:",
-              backendStatus
+              "后台打卡响应:",
+              data
+            );
+
+
+            /*
+             * =================================================
+             * 情况 1：
+             *
+             * 今天已经存在记录
+             *
+             * success:false
+             * alreadyCheckedIn:true
+             *
+             * =================================================
+             */
+
+            if (
+              data &&
+              data.success === false &&
+              (
+                data.alreadyCheckedIn === true ||
+                String(
+                  data.message || ""
+                )
+                  .toLowerCase()
+                  .includes(
+                    "already checked in"
+                  )
+              )
+            ) {
+
+              const backendStatus =
+                normalizeAttendanceStatus(
+                  data.status
+                );
+
+
+              if (
+                backendStatus
+              ) {
+
+                attendanceStatusMap[
+                  studentKey
+                ] = {
+
+                  status:
+                    backendStatus,
+
+                  time:
+                    data.scanTime ||
+                    localAttendanceInfo.time
+
+                };
+
+
+                /*
+                 * 如果这是页面刚刚扫到，
+                 * 但后台其实已经有记录，
+                 * 这里重新显示正确的
+                 * 「今日已打卡」。
+                 */
+
+                showAlreadyChecked(
+
+                  student,
+
+                  attendanceStatusMap[
+                    studentKey
+                  ]
+
+                );
+
+              }
+
+
+              return;
+
+            }
+
+
+            /*
+             * =================================================
+             * 情况 2：
+             *
+             * 第一次成功写入
+             *
+             * Apps Script 会返回：
+             *
+             * success:true
+             * status:"迟到 Lewat"
+             *
+             * 或：
+             *
+             * status:"出席 Hadir"
+             *
+             * =================================================
+             */
+
+            if (
+              data &&
+              data.success === true
+            ) {
+
+              const backendStatus =
+                normalizeAttendanceStatus(
+                  data.status
+                );
+
+
+              if (
+                backendStatus
+              ) {
+
+                attendanceStatusMap[
+                  studentKey
+                ] = {
+
+                  status:
+                    backendStatus,
+
+                  time:
+                    data.scanTime ||
+                    localAttendanceInfo.time
+
+                };
+
+
+                console.log(
+                  "后台最终状态:",
+                  backendStatus
+                );
+
+              }
+
+            }
+
+          }
+        )
+
+        .catch(
+          error => {
+
+            /*
+             * 后台失败不影响已经显示给学生的结果。
+             *
+             * 但 Console 会保留真正错误。
+             */
+
+            console.error(
+              "ATTENDANCE SUBMIT ERROR:",
+              error
             );
 
           }
-
-
-        })
-
-        .catch(err => {
-
-          /*
-           * 后台失败不会影响学生已经看到的结果。
-           */
-
-          console.error(
-            "静默打卡网络提交失败:",
-            err
-          );
-
-        });
+        );
 
     }
 
 
     /*
      * =========================================================
-     * NORMALIZE BACKEND STATUS
-     * =========================================================
-     */
-
-    function normalizeAttendanceStatus(
-      status
-    ) {
-
-      const value =
-        String(status)
-          .trim()
-          .toLowerCase();
-
-
-      if (
-        value === "late" ||
-        value === "lewat" ||
-        value.includes("迟到")
-      ) {
-
-        return "Late";
-
-      }
-
-
-      if (
-        value === "present" ||
-        value === "hadir" ||
-        value.includes("准时") ||
-        value.includes("出席")
-      ) {
-
-        return "Present";
-
-      }
-
-
-      return null;
-
-    }
-
-
-    /*
-     * =========================================================
-     * RESET SCANNER LOCK
+     * RESET SCANNER
      * =========================================================
      */
 
@@ -1675,20 +2315,31 @@
       delayMs
     ) {
 
-      setTimeout(() => {
+      setTimeout(
+        () => {
 
-        showResult(
-          "📷 等待下一位学生...<br>" +
-          "Menunggu murid seterusnya...",
-          "waiting"
-        );
+          showResult(
+
+            "📷 等待下一位学生...<br>" +
+
+            "Menunggu murid seterusnya...",
+
+            "waiting"
+
+          );
 
 
-        isProcessing = false;
+          isProcessing =
+            false;
 
-        lastCode = "";
+          lastCode =
+            "";
 
-      }, delayMs);
+        },
+
+        delayMs
+
+      );
 
     }
 
@@ -1702,76 +2353,102 @@
     function startScanner() {
 
       scanner =
-        new Html5Qrcode("reader");
+        new Html5Qrcode(
+          "reader"
+        );
 
 
       Html5Qrcode
         .getCameras()
 
-        .then(cameraList => {
+        .then(
+          cameraList => {
 
-          cameras =
-            cameraList;
+            cameras =
+              cameraList || [];
 
 
-          if (
-            cameras.length === 0
-          ) {
+            console.log(
+              "CAMERAS:",
+              cameras
+            );
+
+
+            if (
+              cameras.length === 0
+            ) {
+
+              showResult(
+
+                "❌ 找不到相机<br>" +
+
+                "Tiada kamera dijumpai",
+
+                "error"
+
+              );
+
+              return;
+
+            }
+
+
+            /*
+             * 优先后置镜头
+             */
+
+            const backCamera =
+              findCamera(
+                "back"
+              );
+
+
+            if (
+              backCamera
+            ) {
+
+              startCamera(
+                backCamera,
+                "back"
+              );
+
+            }
+
+            else {
+
+              startCamera(
+                cameras[0],
+                "front"
+              );
+
+            }
+
+          }
+        )
+
+        .catch(
+          error => {
+
+            console.error(
+              "GET CAMERAS ERROR:",
+              error
+            );
+
 
             showResult(
-              "❌ 找不到相机<br>" +
-              "Tiada kamera dijumpai",
+
+              "❌ 无法获取相机权限<br>" +
+
+              "Tiada kebenaran kamera<br>" +
+
+              `<div class="system-status">${escapeHtml(error.message || String(error))}</div>`,
+
               "error"
-            );
 
-            return;
-
-          }
-
-
-          /*
-           * 优先后置镜头
-           */
-
-          const backCamera =
-            findCamera("back");
-
-
-          if (backCamera) {
-
-            startCamera(
-              backCamera,
-              "back"
             );
 
           }
-
-          else {
-
-            startCamera(
-              cameras[0],
-              "front"
-            );
-
-          }
-
-        })
-
-        .catch(error => {
-
-          console.error(
-            "GET CAMERAS ERROR:",
-            error
-          );
-
-
-          showResult(
-            "❌ 无法获取相机权限<br>" +
-            "Tiada kebenaran kamera",
-            "error"
-          );
-
-        });
+        );
 
     }
 
@@ -1779,25 +2456,26 @@
     /*
      * =========================================================
      * INITIALIZE
+     *
+     * 先加载学生资料
+     * 再启动相机
      * =========================================================
-     *
-     * 先加载学生资料，
-     * 完成后启动相机。
-     *
      */
 
     loadStudents()
 
-      .finally(() => {
+      .finally(
+        () => {
 
-        startScanner();
+          startScanner();
 
-      });
+        }
+      );
 
 
   </script>
 
+
 </body>
 
 </html>
-```
