@@ -144,9 +144,9 @@
      */
     const API_URL = "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
 
-    let studentCache = {};
-    let studentsLoaded = false;
-
+    let studentCache = {};          // 本地学生信息映射
+    let localCheckedSet = new Set(); // 本地今日已打卡学生集合 (秒级防重复)
+    
     let scanner = null;
     let cameras = [];
     let currentCamera = null;
@@ -170,7 +170,7 @@
       window.speechSynthesis.cancel();
       const speech = new SpeechSynthesisUtterance(text);
       speech.lang = language;
-      speech.rate = 1.1;
+      speech.rate = 1.2; // 稍微加快语速，提升流畅感
       speech.pitch = 1;
       window.speechSynthesis.speak(speech);
     }
@@ -205,7 +205,7 @@
 
     function startCamera(camera, type) {
       const config = {
-        fps: 15,
+        fps: 20, // 提升帧率到 20fps，加快识别反应速度
         qrbox: { width: 220, height: 220 },
         rememberLastUsedCamera: true
       };
@@ -214,7 +214,7 @@
         camera.id,
         config,
         decodedText => handleQR(decodedText),
-        () => {} // 忽略解码失败时的正常高频回调
+        () => {}
       )
       .then(() => {
         currentCamera = type;
@@ -261,10 +261,10 @@
      */
     async function loadStudents() {
       try {
-        showResult("⏳ 正在加载学生资料...<br>Memuatkan maklumat murid...", "waiting");
+        showResult("⏳ 正在预加载全校学生资料...<br>Memuatkan maklumat murid...", "waiting");
         
-        // 加载全校或特定班级的数据
-        const url = API_URL + "?action=students&classes=" + encodeURIComponent("6K,6M");
+        // 不加 classes 参数，默认拉取全校学生
+        const url = API_URL + "?action=students";
         const response = await fetch(url);
         
         if (!response.ok) throw new Error("Network error loading students");
@@ -276,43 +276,30 @@
 
         studentCache = {};
         result.students.forEach(student => {
+          // 同时使用 Barcode 和 StudentID 作为索引键，确保怎么扫都能找到
           if (student.Barcode) {
             studentCache[String(student.Barcode).trim().toUpperCase()] = student;
           }
+          if (student.StudentID) {
+            studentCache[String(student.StudentID).trim().toUpperCase()] = student;
+          }
         });
 
-        studentsLoaded = true;
         showResult("✅ 学生资料已就绪<br>Sedia untuk diimbas", "success");
       } catch (error) {
         console.error("LOAD STUDENTS ERROR:", error);
-        studentsLoaded = false;
-        showResult("⚠️ 缓存加载失败，将切换至在线查询<br>Mod dalam talian", "waiting");
+        showResult("⚠️ 缓存加载失败，将自动依赖网络打卡<br>Mod dalam talian", "waiting");
       }
     }
 
-    async function getStudent(qrCode) {
+    function getStudentFromCache(qrCode) {
       const cleanCode = qrCode.trim().toUpperCase();
-
-      // 1. 优先查缓存
-      if (studentCache[cleanCode]) {
-        return { success: true, student: studentCache[cleanCode] };
-      }
-
-      // 2. 缓存找不到再通过网络查询
-      try {
-        const url = API_URL + "?action=student&barcode=" + encodeURIComponent(cleanCode);
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Network error");
-        return await response.json();
-      } catch (error) {
-        console.error("API Error:", error);
-        return { success: false, message: "无法连接服务器" };
-      }
+      return studentCache[cleanCode] || null;
     }
 
     /*
      * ================================
-     * Core QR Processing
+     * ⚡ Core QR Processing (秒刷逻辑)
      * ================================
      */
     async function handleQR(qrCode) {
@@ -322,88 +309,103 @@
       isProcessing = true;
       lastCode = qrCode;
 
-      showResult("🔍 查询学生资料...<br>Mencari maklumat murid...", "waiting");
+      const cleanCode = qrCode.trim().toUpperCase();
+      const student = getStudentFromCache(cleanCode);
 
-      try {
-        const result = await getStudent(qrCode);
-
-        // 验证学生数据
-        if (!result || result.success !== true || !result.student) {
-          showResult("❌ 找不到学生<br>Murid tidak dijumpai", "error");
-          resetScannerLock(2000);
-          return;
-        }
-
-        const student = result.student;
-        if (!student.StudentID || !student.Class) {
-          showResult("❌ 学生资料不完整<br>Maklumat murid tidak lengkap", "error");
-          resetScannerLock(2000);
-          return;
-        }
-
-        // 发送点名请求（必须携带 class 参数）
-        const attendanceUrl = API_URL + 
-          "?action=attendance" + 
-          "&studentID=" + encodeURIComponent(student.StudentID) + 
-          "&class=" + encodeURIComponent(student.Class);
-
-        const attendanceResponse = await fetch(attendanceUrl);
-        const attendanceResult = await attendanceResponse.json();
-
-        // 逻辑判断处理
-        if (attendanceResult.success) {
-          // 根据后端返回的 status 判断是迟到还是准时
-          const rawStatus = String(attendanceResult.status || "").trim();
-          const isLate = rawStatus.includes("迟") || 
-                         rawStatus.toLowerCase().includes("lewat") || 
-                         rawStatus.toLowerCase().includes("late");
-
-          if (isLate) {
-            // 🟡 迟到
-            showResult(
-              `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
-              `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
-              `<div>🟡 迟到</div><div>Lewat</div>`,
-              "late"
-            );
-            speak(`${student.FullNameC || ''}，迟到`, "zh-CN");
-          } else {
-            // 🟢 准时出席
-            showResult(
-              `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
-              `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
-              `<div>🟢 出席成功</div><div>Present · Hadir</div>`,
-              "success"
-            );
-            speak(`${student.FullNameC || ''} 已出席`, "zh-CN");
-          }
-
-        } else if (attendanceResult.message && attendanceResult.message.includes("already checked in")) {
-          // 重复签到
-          showResult(
-            `<div class='student-name-c'>${student.FullNameC || student.FullName}</div>` +
-            `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
-            `<div>⚠️ 今天已点过名</div><div>Sudah hadir</div>`,
-            "error"
-          );
-          speak("今天已经点名", "zh-CN");
-
-        } else {
-          // 签到失败（其他原因）
-          showResult(
-            `❌ 签到失败: ${attendanceResult.message || '未知错误'}<br>Gagal merekod`,
-            "error"
-          );
-        }
-
-      } catch (error) {
-        console.error("QR ERROR:", error);
-        showResult("❌ 系统网络错误<br>Ralat sistem", "error");
+      // 1. 本地防重复打卡检查 (0毫秒响应)
+      const studentKey = student ? student.StudentID : cleanCode;
+      if (localCheckedSet.has(studentKey)) {
+        const displayName = student ? (student.FullNameC || student.FullName) : "学生";
+        showResult(
+          `<div class='student-name-c'>${displayName}</div>` +
+          `<div class='student-info'>${student ? student.Class : ''}</div><br>` +
+          `<div>⚠️ 今天已点过名</div><div>Sudah hadir</div>`,
+          "error"
+        );
+        speak("今天已经点名", "zh-CN");
+        resetScannerLock(1500); // 1.5秒后解锁扫下一个
+        return;
       }
 
-      resetScannerLock(2000);
+      // 2. 如果本地找到了学生 (秒刷成功路径)
+      if (student) {
+        const studentName = student.FullNameC || student.FullName;
+        
+        // 先在前端标记为已打卡
+        localCheckedSet.add(studentKey);
+
+        // 🟢 立即在界面弹出成功/展示信息 (不用等网络)
+        showResult(
+          `<div class='student-name-c'>${studentName}</div>` +
+          `<div class='student-info'>${student.Class} · ${student.StudentID}</div><br>` +
+          `<div>🟢 打卡成功</div><div>Hadir</div>`,
+          "success"
+        );
+        speak(`${studentName} 已打卡`, "zh-CN");
+
+        // ⚡ 极速静默提交给后台，完全不阻塞前端
+        sendAttendanceAsync(student.StudentID, student.Class);
+
+        // 1.2 秒后迅速复原摄像头准备扫下一位
+        resetScannerLock(1200);
+      } 
+      // 3. 本地缓存没找到该学生（回退机制：请求网络）
+      else {
+        showResult("🔍 正在在线查询学生...<br>Mencari murid...", "waiting");
+        try {
+          const url = API_URL + "?action=student&barcode=" + encodeURIComponent(cleanCode);
+          const response = await fetch(url);
+          const result = await response.json();
+
+          if (result && result.success && result.student) {
+            const st = result.student;
+            localCheckedSet.add(st.StudentID);
+
+            showResult(
+              `<div class='student-name-c'>${st.FullNameC || st.FullName}</div>` +
+              `<div class='student-info'>${st.Class} · ${st.StudentID}</div><br>` +
+              `<div>🟢 打卡成功</div><div>Hadir</div>`,
+              "success"
+            );
+            speak(`${st.FullNameC || ''} 已打卡`, "zh-CN");
+            sendAttendanceAsync(st.StudentID, st.Class);
+          } else {
+            showResult("❌ 找不到学生资料<br>Murid tidak dijumpai", "error");
+            speak("找不到学生", "zh-CN");
+          }
+        } catch (err) {
+          console.error(err);
+          showResult("❌ 网络连接失败<br>Ralat Rangkaian", "error");
+        }
+        resetScannerLock(1800);
+      }
     }
 
+    /**
+     * ⚡ 静默后台异步打卡（Fire and forget）
+     */
+    function sendAttendanceAsync(studentID, studentClass) {
+      const attendanceUrl = API_URL + 
+        "?action=attendance" + 
+        "&studentID=" + encodeURIComponent(studentID) + 
+        "&class=" + encodeURIComponent(studentClass || "");
+
+      fetch(attendanceUrl)
+        .then(res => res.json())
+        .then(resData => {
+          console.log("后台打卡响应:", resData);
+          if (!resData.success && resData.message && resData.message.includes("already checked in")) {
+            console.warn("后台显示今日已打卡");
+          }
+        })
+        .catch(err => {
+          console.error("静默打卡网络提交失败:", err);
+        });
+    }
+
+    /**
+     * 重置扫码锁
+     */
     function resetScannerLock(delayMs) {
       setTimeout(() => {
         showResult("📷 等待下一位学生...<br>Menunggu murid seterusnya...", "waiting");
@@ -441,7 +443,7 @@
         });
     }
 
-    // 网页加载后，先加载学生数据，再启动相机
+    // 网页加载后，先预加载全校数据，随后立刻启动相机
     loadStudents().finally(() => {
       startScanner();
     });
