@@ -1833,38 +1833,40 @@ async function teacherLogin() {
 async function loadClasses() {
 
   const select =
-    document
-      .getElementById(
-        "classSelect"
-      );
-
+    document.getElementById("classSelect");
 
   select.innerHTML =
-
     `<option value="">
-      正在加载班级...
-      / Memuatkan kelas...
+      正在加载班级... / Memuatkan kelas...
     </option>`;
-
 
   try {
 
+    const url =
+      API_URL + "?action=classes";
+
+    console.log("Loading classes from:");
+    console.log(url);
+
     const response =
-      await fetch(
+      await fetch(url, {
+        cache: "no-store"
+      });
 
-        API_URL +
-        "?action=classes",
+    console.log("Response status:");
+    console.log(response.status);
 
-        {
-          cache: "no-store"
-        }
-
+    if (!response.ok) {
+      throw new Error(
+        "HTTP " + response.status
       );
-
+    }
 
     const result =
       await response.json();
 
+    console.log("Classes result:");
+    console.log(result);
 
     if (
       !result ||
@@ -1872,55 +1874,72 @@ async function loadClasses() {
     ) {
 
       throw new Error(
-        result.message ||
-        "无法取得班级"
+        result && result.message
+          ? result.message
+          : "无法取得班级 / Gagal mendapatkan kelas"
       );
 
     }
 
-
     select.innerHTML =
-
       `<option value="">
         请选择班级 / Sila pilih kelas
       </option>`;
 
+    const classes =
+      result.classes || [];
 
-    (result.classes || [])
-      .forEach(
-        className => {
+    if (classes.length === 0) {
 
-          const option =
-            document.createElement(
-              "option"
-            );
+      select.innerHTML =
+        `<option value="">
+          没有班级资料 / Tiada data kelas
+        </option>`;
 
-          option.value =
-            className;
-
-          option.textContent =
-            className;
-
-          select.appendChild(
-            option
-          );
-
-        }
+      throw new Error(
+        "没有取得任何班级资料 / Tiada data kelas"
       );
+    }
 
+    classes.forEach(
+      className => {
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          className;
+
+        option.textContent =
+          className;
+
+        select.appendChild(option);
+
+      }
+    );
 
   }
 
   catch (error) {
 
-    select.innerHTML =
+    console.error(
+      "loadClasses error:",
+      error
+    );
 
+    select.innerHTML =
       `<option value="">
         无法加载班级 / Gagal memuatkan kelas
       </option>`;
 
     showTeacherMessage(
-      "❌ 无法加载班级 / Gagal memuatkan kelas"
+      "❌ 无法加载班级 / Gagal memuatkan kelas" +
+      "<br>" +
+      "<span class='small-text'>" +
+      escapeHtml(
+        error.message || String(error)
+      ) +
+      "</span>"
     );
 
   }
