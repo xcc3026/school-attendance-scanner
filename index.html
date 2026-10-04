@@ -796,58 +796,70 @@
 
       <div class="summary">
 
+  <div class="summary-box">
 
-        <div class="summary-box">
+    🟢 出席
 
-          🟢 出席
+    <div
+      id="presentCount"
+      class="summary-number"
+    >
+      0
+    </div>
 
-          <div
-            id="presentCount"
-            class="summary-number"
-          >
-            0
-          </div>
+    Hadir
 
-          Hadir
-
-        </div>
-
-
-        <div class="summary-box">
-
-          🟡 迟到
-
-          <div
-            id="lateCount"
-            class="summary-number"
-          >
-            0
-          </div>
-
-          Lewat
-
-        </div>
+  </div>
 
 
-        <div class="summary-box">
+  <div class="summary-box">
 
-          🔴 缺席
+    🟡 迟到
 
-          <div
-            id="absentCount"
-            class="summary-number"
-          >
-            0
-          </div>
+    <div
+      id="lateCount"
+      class="summary-number"
+    >
+      0
+    </div>
 
-          Tidak Hadir
+    Lewat
 
-        </div>
-
-
-      </div>
+  </div>
 
 
+  <div class="summary-box">
+
+    🔴 缺席
+
+    <div
+      id="absentCount"
+      class="summary-number"
+    >
+      0
+    </div>
+
+    Tidak Hadir
+
+  </div>
+
+
+  <div class="summary-box">
+
+    🔵 校外活动
+
+    <div
+      id="activityCount"
+      class="summary-number"
+    >
+      0
+    </div>
+
+    Aktiviti Luar Sekolah
+
+  </div>
+
+</div>
       <!-- 第二排：只显示三个统计 -->
 
       <div class="summary">
@@ -1925,7 +1937,14 @@ function renderAttendance(
 
       absentCount;
 
+document
+  .getElementById(
+    "activityCount"
+  )
+  .textContent =
 
+    activityCount;
+  
   /*
    * =====================================================
    * 班级出席率
