@@ -253,6 +253,99 @@
 
     }
 
+    /*
+     * =====================================================
+     * 学生筛选
+     * =====================================================
+     */
+
+    .filter-box {
+
+      background: #f9fafb;
+
+      padding: 12px;
+
+      border-radius: 12px;
+
+      margin-top: 15px;
+
+      margin-bottom: 15px;
+
+    }
+
+    .filter-title {
+
+      font-weight: bold;
+
+      margin-bottom: 8px;
+
+    }
+
+    .filter-buttons {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 7px;
+
+    }
+
+    .filter-button {
+
+      margin: 0;
+
+      padding: 10px 5px;
+
+      background: white;
+
+      border: 1px solid #d1d5db;
+
+      color: #374151;
+
+      font-size: 14px;
+
+    }
+
+    .filter-button.active {
+
+      background: #2563eb;
+
+      color: white;
+
+      border-color: #2563eb;
+
+    }
+
+    .select-all-button {
+
+      background: #fef3c7;
+
+      color: #92400e;
+
+      margin-top: 10px;
+
+    }
+
+    .selected-info {
+
+      text-align: center;
+
+      margin-top: 10px;
+
+      font-weight: bold;
+
+      color: #2563eb;
+
+    }
+
+    /*
+     * =====================================================
+     * 学生卡片
+     * =====================================================
+     */
+
     .student-card {
 
       border: 1px solid #e5e7eb;
@@ -264,6 +357,48 @@
       margin-top: 10px;
 
       text-align: left;
+
+      position: relative;
+
+    }
+
+    .student-card.selected {
+
+      border: 2px solid #2563eb;
+
+      background: #eff6ff;
+
+    }
+
+    .student-select-row {
+
+      display: flex;
+
+      align-items: flex-start;
+
+      gap: 10px;
+
+    }
+
+    .student-checkbox {
+
+      width: 22px;
+
+      height: 22px;
+
+      margin: 2px 0 0 0;
+
+      flex-shrink: 0;
+
+      cursor: pointer;
+
+    }
+
+    .student-content {
+
+      flex: 1;
+
+      min-width: 0;
 
     }
 
@@ -290,6 +425,26 @@
       font-size: 13px;
 
       margin-top: 5px;
+
+    }
+
+    .rmt-badge {
+
+      display: inline-block;
+
+      margin-left: 5px;
+
+      padding: 3px 7px;
+
+      border-radius: 8px;
+
+      background: #fef3c7;
+
+      color: #92400e;
+
+      font-size: 12px;
+
+      font-weight: bold;
 
     }
 
@@ -571,6 +726,11 @@
           repeat(2, 1fr);
       }
 
+      .filter-buttons {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
     }
 
   </style>
@@ -792,75 +952,79 @@
       ></div>
 
 
-      <!-- 第一排：只显示出席 / 迟到 / 缺席 -->
+      <!-- 第一排 -->
 
       <div class="summary">
 
-  <div class="summary-box">
 
-    🟢 出席
+        <div class="summary-box">
 
-    <div
-      id="presentCount"
-      class="summary-number"
-    >
-      0
-    </div>
+          🟢 出席
 
-    Hadir
+          <div
+            id="presentCount"
+            class="summary-number"
+          >
+            0
+          </div>
 
-  </div>
+          Hadir
 
-
-  <div class="summary-box">
-
-    🟡 迟到
-
-    <div
-      id="lateCount"
-      class="summary-number"
-    >
-      0
-    </div>
-
-    Lewat
-
-  </div>
+        </div>
 
 
-  <div class="summary-box">
+        <div class="summary-box">
 
-    🔴 缺席
+          🟡 迟到
 
-    <div
-      id="absentCount"
-      class="summary-number"
-    >
-      0
-    </div>
+          <div
+            id="lateCount"
+            class="summary-number"
+          >
+            0
+          </div>
 
-    Tidak Hadir
+          Lewat
 
-  </div>
+        </div>
 
 
-  <div class="summary-box">
+        <div class="summary-box">
 
-    🔵 校外活动
+          🔴 缺席
 
-    <div
-      id="activityCount"
-      class="summary-number"
-    >
-      0
-    </div>
+          <div
+            id="absentCount"
+            class="summary-number"
+          >
+            0
+          </div>
 
-    Aktiviti Luar Sekolah
+          Tidak Hadir
 
-  </div>
+        </div>
 
-</div>
-      <!-- 第二排：只显示三个统计 -->
+
+        <div class="summary-box">
+
+          🔵 校外活动
+
+          <div
+            id="activityCount"
+            class="summary-number"
+          >
+            0
+          </div>
+
+          Aktiviti Luar Sekolah
+
+        </div>
+
+
+      </div>
+
+
+      <!-- 第二排 -->
 
       <div class="summary">
 
@@ -907,6 +1071,157 @@
           </div>
 
           Belum Direkodkan
+
+        </div>
+
+
+      </div>
+
+
+      <!-- =====================================================
+           学生筛选
+           ===================================================== -->
+
+      <div class="filter-box">
+
+        <div class="filter-title">
+
+          🔎 学生筛选 / Tapis Murid
+
+        </div>
+
+
+        <div class="filter-buttons">
+
+
+          <button
+            id="filterAll"
+            class="filter-button active"
+            onclick="setStudentFilter('All')"
+          >
+
+            全部
+
+            <br>
+
+            Semua
+
+          </button>
+
+
+          <button
+            id="filterUnrecorded"
+            class="filter-button"
+            onclick="setStudentFilter('Unrecorded')"
+          >
+
+            尚未记录
+
+            <br>
+
+            Belum Direkodkan
+
+          </button>
+
+
+          <button
+            id="filterPresent"
+            class="filter-button"
+            onclick="setStudentFilter('Present')"
+          >
+
+            出席
+
+            <br>
+
+            Hadir
+
+          </button>
+
+
+          <button
+            id="filterLate"
+            class="filter-button"
+            onclick="setStudentFilter('Late')"
+          >
+
+            迟到
+
+            <br>
+
+            Lewat
+
+          </button>
+
+
+          <button
+            id="filterAbsent"
+            class="filter-button"
+            onclick="setStudentFilter('Absent')"
+          >
+
+            缺席
+
+            <br>
+
+            Tidak Hadir
+
+          </button>
+
+
+          <button
+            id="filterActivity"
+            class="filter-button"
+            onclick="setStudentFilter('Activity')"
+          >
+
+            校外活动
+
+            <br>
+
+            Aktiviti Luar
+
+          </button>
+
+
+          <button
+            id="filterRmt"
+            class="filter-button"
+            onclick="setStudentFilter('RMT')"
+          >
+
+            🍱 RMT
+
+          </button>
+
+
+        </div>
+
+
+        <button
+          class="select-all-button"
+          onclick="selectAllUnrecorded()"
+        >
+
+          ☑️ 全选尚未记录
+
+          <br>
+
+          Pilih Semua Belum Direkodkan
+
+        </button>
+
+
+        <div
+          id="selectedInfo"
+          class="selected-info"
+        >
+
+          已选择 0 人
+
+          <br>
+
+          0 murid dipilih
 
         </div>
 
@@ -1086,6 +1401,20 @@ let isSwitching = false;
 
 /*
  * =========================================================
+ * 教师页面资料
+ * =========================================================
+ */
+
+let currentStudents = [];
+
+let currentFilter = "All";
+
+let selectedStudentIDs =
+  new Set();
+
+
+/*
+ * =========================================================
  * 页面
  * =========================================================
  */
@@ -1171,6 +1500,12 @@ function logout() {
   currentTeacher = null;
 
   attendanceStatusMap = {};
+
+  currentStudents = [];
+
+  selectedStudentIDs.clear();
+
+  currentFilter = "All";
 
   hideAllPages();
 
@@ -1558,6 +1893,11 @@ async function loadClassAttendance() {
       );
 
 
+  selectedStudentIDs.clear();
+
+  updateSelectedInfo();
+
+
   if (
     !classID
   ) {
@@ -1565,6 +1905,8 @@ async function loadClassAttendance() {
     section
       .classList
       .add("hidden");
+
+    currentStudents = [];
 
     return;
 
@@ -1720,6 +2062,10 @@ function renderAttendance(
     result.students || [];
 
 
+  currentStudents =
+    students;
+
+
   /*
    * =====================================================
    * 统计
@@ -1832,13 +2178,16 @@ function renderAttendance(
         /*
          * RMT 出席：
          *
-         * 出席、迟到、校外活动
-         * 都算已有出席记录
+         * 只有「出席」及「迟到」
+         * 才算 RMT 出席。
+         *
+         * 校外活动：
+         * 学校出席，但 RMT 不出席。
          */
 
         if (
           status === "Present" ||
-          status === "Late" ||
+          status === "Late"
         ) {
 
           rmtPresent++;
@@ -1863,9 +2212,12 @@ function renderAttendance(
 
   /*
    * =====================================================
-   * 出席人数
+   * 学校出席人数
    *
-   * 校外活动也算出席
+   * 校外活动也算学校出席
+   *
+   * 但是这里「出席」统计只显示真正 Hadir，
+   * 不把 Late / Activity 加进去。
    * =====================================================
    */
 
@@ -1879,9 +2231,10 @@ function renderAttendance(
    * =====================================================
    * 班级出席率
    *
-   * 分母 = 全班学生人数
+   * 分母 = 全班人数
    *
-   * 尚未记录的学生也算在全班人数里面
+   * 出席 + 迟到 + 校外活动
+   * 都算学校出席。
    * =====================================================
    */
 
@@ -1904,9 +2257,7 @@ function renderAttendance(
 
   /*
    * =====================================================
-   * 显示三项主要统计
-   *
-   * 不再显示第一排的尚未记录数字
+   * 显示统计
    * =====================================================
    */
 
@@ -1916,7 +2267,7 @@ function renderAttendance(
     )
     .textContent =
 
-      totalPresent;
+      presentCount;
 
 
   document
@@ -1936,14 +2287,16 @@ function renderAttendance(
 
       absentCount;
 
-document
-  .getElementById(
-    "activityCount"
-  )
-  .textContent =
 
-    activityCount;
-  
+  document
+    .getElementById(
+      "activityCount"
+    )
+    .textContent =
+
+      activityCount;
+
+
   /*
    * =====================================================
    * 班级出席率
@@ -1965,13 +2318,6 @@ document
   /*
    * =====================================================
    * RMT 出席
-   *
-   * 例如：
-   *
-   * 1 / 3
-   *
-   * 1 = RMT 已有出席记录
-   * 3 = 全部 RMT 学生
    * =====================================================
    */
 
@@ -1991,13 +2337,6 @@ document
   /*
    * =====================================================
    * 班级尚未记录
-   *
-   * 例如：
-   *
-   * 20 / 32
-   *
-   * 20 = 尚未记录
-   * 32 = 全班人数
    * =====================================================
    */
 
@@ -2027,9 +2366,272 @@ document
 
   /*
    * =====================================================
-   * 学生名单
+   * 重设筛选
    * =====================================================
    */
+
+  currentFilter = "All";
+
+  updateFilterButtons();
+
+
+  /*
+   * =====================================================
+   * 显示学生名单
+   * =====================================================
+   */
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 学生筛选
+ * =========================================================
+ */
+
+function setStudentFilter(
+  filter
+) {
+
+  currentFilter =
+    filter;
+
+  updateFilterButtons();
+
+  renderStudentList();
+
+}
+
+
+function updateFilterButtons() {
+
+  const buttons = {
+
+    All:
+      "filterAll",
+
+    Unrecorded:
+      "filterUnrecorded",
+
+    Present:
+      "filterPresent",
+
+    Late:
+      "filterLate",
+
+    Absent:
+      "filterAbsent",
+
+    Activity:
+      "filterActivity",
+
+    RMT:
+      "filterRmt"
+
+  };
+
+
+  Object
+    .keys(buttons)
+    .forEach(
+      key => {
+
+        const button =
+          document
+            .getElementById(
+              buttons[key]
+            );
+
+
+        if (!button) {
+          return;
+        }
+
+
+        button
+          .classList
+          .remove("active");
+
+
+        if (
+          key === currentFilter
+        ) {
+
+          button
+            .classList
+            .add("active");
+
+        }
+
+      }
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * 全选尚未记录
+ * =========================================================
+ */
+
+function selectAllUnrecorded() {
+
+  if (
+    currentStudents.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentStudents.forEach(
+    student => {
+
+      const status =
+        normalizeDisplayStatus(
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
+        );
+
+
+      if (
+        status === "Unrecorded"
+      ) {
+
+        const studentID =
+          String(
+            student.StudentID || ""
+          )
+            .trim();
+
+
+        if (
+          studentID
+        ) {
+
+          selectedStudentIDs.add(
+            studentID
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 单个学生选择
+ * =========================================================
+ */
+
+function toggleStudentSelection(
+  studentID
+) {
+
+  const id =
+    String(
+      studentID || ""
+    )
+      .trim();
+
+
+  if (!id) {
+    return;
+  }
+
+
+  if (
+    selectedStudentIDs.has(id)
+  ) {
+
+    selectedStudentIDs.delete(id);
+
+  }
+
+  else {
+
+    selectedStudentIDs.add(id);
+
+  }
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 已选择人数
+ * =========================================================
+ */
+
+function updateSelectedInfo() {
+
+  const box =
+    document
+      .getElementById(
+        "selectedInfo"
+      );
+
+
+  if (!box) {
+    return;
+  }
+
+
+  const count =
+    selectedStudentIDs.size;
+
+
+  box.innerHTML =
+
+    "已选择 " +
+
+    count +
+
+    " 人" +
+
+    "<br>" +
+
+    count +
+
+    " murid dipilih";
+
+}
+
+
+/*
+ * =========================================================
+ * 学生名单显示
+ * =========================================================
+ */
+
+function renderStudentList() {
 
   const list =
     document
@@ -2038,11 +2640,16 @@ document
       );
 
 
+  if (!list) {
+    return;
+  }
+
+
   list.innerHTML = "";
 
 
   if (
-    students.length === 0
+    currentStudents.length === 0
   ) {
 
     list.innerHTML =
@@ -2062,7 +2669,163 @@ document
   }
 
 
-  students.forEach(
+  /*
+   * =====================================================
+   * 先按：
+   *
+   * 1. 尚未记录
+   * 2. 其他状态
+   * =====================================================
+   */
+
+  let studentsToShow =
+
+    [...currentStudents];
+
+
+  studentsToShow.sort(
+    (a, b) => {
+
+      const statusA =
+        normalizeDisplayStatus(
+
+          a.StatusToday ||
+
+          a.AttendanceStatus ||
+
+          a.status ||
+
+          ""
+
+        );
+
+
+      const statusB =
+        normalizeDisplayStatus(
+
+          b.StatusToday ||
+
+          b.AttendanceStatus ||
+
+          b.status ||
+
+          ""
+
+        );
+
+
+      if (
+        statusA === "Unrecorded" &&
+        statusB !== "Unrecorded"
+      ) {
+
+        return -1;
+
+      }
+
+
+      if (
+        statusA !== "Unrecorded" &&
+        statusB === "Unrecorded"
+      ) {
+
+        return 1;
+
+      }
+
+
+      return 0;
+
+    }
+  );
+
+
+  /*
+   * =====================================================
+   * 应用筛选
+   * =====================================================
+   */
+
+  studentsToShow =
+    studentsToShow.filter(
+      student => {
+
+        const status =
+          normalizeDisplayStatus(
+
+            student.StatusToday ||
+
+            student.AttendanceStatus ||
+
+            student.status ||
+
+            ""
+
+          );
+
+
+        if (
+          currentFilter === "All"
+        ) {
+
+          return true;
+
+        }
+
+
+        if (
+          currentFilter === "RMT"
+        ) {
+
+          const rmt =
+            String(
+              student.RMT || ""
+            )
+              .trim()
+              .toUpperCase();
+
+
+          return (
+
+            rmt === "YES" ||
+            rmt === "Y" ||
+            rmt === "是"
+
+          );
+
+        }
+
+
+        return (
+          status === currentFilter
+        );
+
+      }
+    );
+
+
+  if (
+    studentsToShow.length === 0
+  ) {
+
+    list.innerHTML =
+
+      `<div class="message message-waiting">
+
+        没有符合条件的学生
+
+        <br>
+
+        Tiada murid yang sepadan
+
+      </div>`;
+
+    return;
+
+  }
+
+
+  studentsToShow.forEach(
     (student, index) => {
 
       list.appendChild(
@@ -2253,7 +3016,15 @@ function createStudentCard(
     String(
       student.RMT || ""
     )
+      .trim()
       .toUpperCase();
+
+
+  const isRmt =
+
+    rmt === "YES" ||
+    rmt === "Y" ||
+    rmt === "是";
 
 
   let status =
@@ -2275,25 +3046,105 @@ function createStudentCard(
     );
 
 
+  const isSelected =
+    selectedStudentIDs.has(
+      String(
+        studentID
+      )
+        .trim()
+    );
+
+
+  if (
+    isSelected
+  ) {
+
+    card.classList.add(
+      "selected"
+    );
+
+  }
+
+
+  let rmtBadge = "";
+
+
+  if (
+    isRmt
+  ) {
+
+    rmtBadge =
+
+      `<span class="rmt-badge">
+        🍱 RMT
+      </span>`;
+
+  }
+
+
   card.innerHTML =
 
-    `<div class="student-name">
-      ${index}. ${escapeHtml(nameC)}
+    `<div class="student-select-row">` +
+
+
+      (
+        canEdit
+
+        ?
+
+        `<input
+          type="checkbox"
+          class="student-checkbox"
+          ${isSelected ? "checked" : ""}
+          onchange="toggleStudentSelection('${escapeJs(studentID)}')"
+        >`
+
+        :
+
+        ``
+      ) +
+
+
+      `<div class="student-content">
+
+        <div class="student-name">
+
+          ${index}.
+          ${escapeHtml(nameC)}
+
+          ${rmtBadge}
+
+        </div>
+
+        <div class="student-name-en">
+
+          ${escapeHtml(name)}
+
+        </div>
+
+        <div class="student-detail">
+
+          ID：${escapeHtml(studentID)}
+
+        </div>
+
+      </div>
+
     </div>` +
 
-    `<div class="student-name-en">
-      ${escapeHtml(name)}
-    </div>` +
-
-    `<div class="student-detail">
-      ID：${escapeHtml(studentID)}
-      · RMT：${escapeHtml(rmt || "NO")}
-    </div>` +
 
     `<div class="status ${getStatusClass(status)}">
+
       ${getStatusText(status)}
+
     </div>`;
 
+
+  /*
+   * =====================================================
+   * 单人修改按钮
+   * =====================================================
+   */
 
   if (
     canEdit
@@ -2466,14 +3317,6 @@ async function setAttendance(
   status
 ) {
 
-  const classID =
-    document
-      .getElementById(
-        "classSelect"
-      )
-      .value;
-
-
   const selectedDate =
     document
       .getElementById(
@@ -2556,6 +3399,14 @@ async function setAttendance(
     }
 
 
+    selectedStudentIDs.delete(
+      String(
+        studentID
+      )
+        .trim()
+    );
+
+
     await loadClassAttendance();
 
 
@@ -2570,8 +3421,11 @@ async function setAttendance(
       "Gagal merekod\n\n" +
 
       (
+
         error.message ||
+
         String(error)
+
       )
 
     );
@@ -2759,7 +3613,9 @@ async function loadStudents() {
     showScanResult(
 
       "⏳ 正在加载学生资料..." +
+
       "<br>" +
+
       "Memuatkan maklumat murid...",
 
       "scan-waiting"
@@ -2839,11 +3695,17 @@ async function loadStudents() {
     showScanResult(
 
       "✅ 学生资料已就绪" +
+
       "<br>" +
+
       "Sedia untuk diimbas" +
+
       "<br>" +
+
       `<span class="small-text">
+
         ${result.students.length} 名学生
+
       </span>`,
 
       "scan-success"
@@ -2858,7 +3720,9 @@ async function loadStudents() {
     showScanResult(
 
       "⚠️ 学生资料加载失败" +
+
       "<br>" +
+
       "Gagal memuatkan maklumat murid",
 
       "scan-error"
@@ -2903,10 +3767,13 @@ function getStudentFromCache(
 ) {
 
   return (
+
     studentCache[
       normalizeCode(code)
     ] ||
+
     null
+
   );
 
 }
@@ -3098,17 +3965,23 @@ async function handleQR(
       showScanResult(
 
         `<div class="student-name-c">
+
           ${escapeHtml(
             student.FullNameC ||
             student.FullName ||
             ""
           )}
+
         </div>` +
 
         `<div>
+
           ⚠️ 今日已打卡
+
           <br>
+
           Sudah hadir hari ini
+
         </div>`,
 
         "scan-error"
@@ -3148,19 +4021,25 @@ async function handleQR(
       showScanResult(
 
         `<div class="student-name-c">
+
           ${escapeHtml(
             student.FullNameC ||
             student.FullName ||
             ""
           )}
+
         </div>` +
 
         `<div>
+
           🟡 迟到 Lewat
+
         </div>` +
 
         `<div class="small-text">
+
           ${attendanceInfo.time}
+
         </div>`,
 
         "scan-late"
@@ -3174,19 +4053,25 @@ async function handleQR(
       showScanResult(
 
         `<div class="student-name-c">
+
           ${escapeHtml(
             student.FullNameC ||
             student.FullName ||
             ""
           )}
+
         </div>` +
 
         `<div>
+
           🟢 准时出席 Hadir
+
         </div>` +
 
         `<div class="small-text">
+
           ${attendanceInfo.time}
+
         </div>`,
 
         "scan-success"
@@ -3209,14 +4094,20 @@ async function handleQR(
     showScanResult(
 
       "❌ 找不到学生资料" +
+
       "<br>" +
+
       "Murid tidak dijumpai" +
+
       "<br>" +
+
       `<span class="small-text">
+
         ${escapeHtml(
           error.message ||
           String(error)
         )}
+
       </span>`,
 
       "scan-error"
@@ -3314,7 +4205,9 @@ function resetScannerLock(
       showScanResult(
 
         "📷 等待下一位学生..." +
+
         "<br>" +
+
         "Menunggu murid seterusnya...",
 
         "scan-waiting"
@@ -3532,14 +4425,20 @@ function startCamera(
         showScanResult(
 
           "❌ 无法开启相机" +
+
           "<br>" +
+
           "Tidak dapat membuka kamera" +
+
           "<br>" +
+
           `<span class="small-text">
+
             ${escapeHtml(
               error.message ||
               String(error)
             )}
+
           </span>`,
 
           "scan-error"
@@ -3577,7 +4476,9 @@ function changeCamera(
     showScanResult(
 
       "⚠️ 找不到相机" +
+
       "<br>" +
+
       "Kamera tidak dijumpai",
 
       "scan-error"
@@ -3692,7 +4593,9 @@ function startScanner() {
           showScanResult(
 
             "❌ 找不到相机" +
+
             "<br>" +
+
             "Tiada kamera dijumpai",
 
             "scan-error"
@@ -3737,14 +4640,20 @@ function startScanner() {
         showScanResult(
 
           "❌ 无法获取相机权限" +
+
           "<br>" +
+
           "Tiada kebenaran kamera" +
+
           "<br>" +
+
           `<span class="small-text">
+
             ${escapeHtml(
               error.message ||
               String(error)
             )}
+
           </span>`,
 
           "scan-error"
