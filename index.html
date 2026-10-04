@@ -1755,6 +1755,12 @@ function renderAttendance(
   result
 ) {
 
+  /*
+   * =====================================================
+   * 班级名称与日期
+   * =====================================================
+   */
+
   document
     .getElementById(
       "classTitle"
@@ -1780,13 +1786,162 @@ function renderAttendance(
     );
 
 
+  /*
+   * =====================================================
+   * 学生资料
+   * =====================================================
+   */
+
+  const students =
+    result.students || [];
+
+
+  /*
+   * =====================================================
+   * 重新计算班级出席人数
+   *
+   * Present  = 出席
+   * Late     = 迟到
+   * Absent   = 缺席
+   * Activity = 校外活动
+   * Unrecorded = 尚未记录
+   * =====================================================
+   */
+
+  let presentCount = 0;
+
+  let lateCount = 0;
+
+  let absentCount = 0;
+
+  let activityCount = 0;
+
+  let unrecordedCount = 0;
+
+
+  students.forEach(
+    student => {
+
+      let status =
+
+        student.StatusToday ||
+
+        student.AttendanceStatus ||
+
+        student.status ||
+
+        "";
+
+
+      status =
+        normalizeDisplayStatus(
+          status
+        );
+
+
+      if (
+        status === "Present"
+      ) {
+
+        presentCount++;
+
+      }
+
+      else if (
+        status === "Late"
+      ) {
+
+        lateCount++;
+
+      }
+
+      else if (
+        status === "Absent"
+      ) {
+
+        absentCount++;
+
+      }
+
+      else if (
+        status === "Activity"
+      ) {
+
+        activityCount++;
+
+      }
+
+      else {
+
+        unrecordedCount++;
+
+      }
+
+    }
+  );
+
+
+  /*
+   * =====================================================
+   * 总出席
+   *
+   * 出席 + 迟到 + 校外活动
+   * =====================================================
+   */
+
+  const totalAttended =
+
+    presentCount +
+
+    lateCount +
+
+    activityCount;
+
+
+  /*
+   * =====================================================
+   * 出席率
+   *
+   * 全班学生都作为分母
+   * 尚未记录不会被算作出席
+   * =====================================================
+   */
+
+  const totalStudents =
+    students.length;
+
+
+  let attendanceRate = 0;
+
+
+  if (
+    totalStudents > 0
+  ) {
+
+    attendanceRate =
+
+      (
+        totalAttended /
+        totalStudents
+      ) * 100;
+
+  }
+
+
+  /*
+   * =====================================================
+   * 显示人数
+   * =====================================================
+   */
+
   document
     .getElementById(
       "presentCount"
     )
     .textContent =
 
-      result.presentCount || 0;
+      presentCount +
+      activityCount;
 
 
   document
@@ -1795,7 +1950,7 @@ function renderAttendance(
     )
     .textContent =
 
-      result.lateCount || 0;
+      lateCount;
 
 
   document
@@ -1804,7 +1959,7 @@ function renderAttendance(
     )
     .textContent =
 
-      result.absentCount || 0;
+      absentCount;
 
 
   document
@@ -1813,7 +1968,7 @@ function renderAttendance(
     )
     .textContent =
 
-      result.unrecordedCount || 0;
+      unrecordedCount;
 
 
   document
@@ -1822,15 +1977,18 @@ function renderAttendance(
     )
     .textContent =
 
-      (
-        Number(
-          result.attendanceRate || 0
-        )
-        .toFixed(1)
-      ) +
-
+      attendanceRate.toFixed(1) +
       "%";
 
+
+  /*
+   * =====================================================
+   * RMT
+   * =====================================================
+   *
+   * RMT 独立计算，不影响班级总出席人数
+   * =====================================================
+   */
 
   const rmt =
     result.rmt || {};
@@ -1863,14 +2021,22 @@ function renderAttendance(
       rmt.unrecorded || 0;
 
 
+  /*
+   * =====================================================
+   * 权限
+   * =====================================================
+   */
+
   showTeacherPermission(
     result
   );
 
 
-  const students =
-    result.students || [];
-
+  /*
+   * =====================================================
+   * 学生列表
+   * =====================================================
+   */
 
   const list =
     document
@@ -1899,14 +2065,25 @@ function renderAttendance(
   }
 
 
+  /*
+   * =====================================================
+   * 显示每一位学生
+   * =====================================================
+   */
+
   students.forEach(
-    (student, index) => {
+    (
+      student,
+      index
+    ) => {
 
       list.appendChild(
+
         createStudentCard(
           student,
           index + 1
         )
+
       );
 
     }
