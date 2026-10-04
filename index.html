@@ -1224,7 +1224,73 @@
           0 murid dipilih
 
         </div>
+<div
+  class="student-actions"
+  id="batchActions"
+>
 
+  <button
+    class="present-button"
+    onclick="batchSetAttendance('出席 Hadir')"
+  >
+    🟢 批量出席
+    <br>
+    Hadir
+  </button>
+
+  <button
+    class="late-button"
+    onclick="batchSetAttendance('迟到 Lewat')"
+  >
+    🟡 批量迟到
+    <br>
+    Lewat
+  </button>
+
+  <button
+    class="absent-button"
+    onclick="batchSetAttendance('缺席 Tidak Hadir')"
+  >
+    🔴 批量缺席
+    <br>
+    Tidak Hadir
+  </button>
+
+  <button
+    class="activity-button"
+    onclick="batchSetAttendance('校外活动 Aktiviti Luar Sekolah')"
+  >
+    🔵 批量校外活动
+    <br>
+    Aktiviti Luar Sekolah
+  </button>
+
+</div>
+
+
+<button
+  class="secondary-button"
+  onclick="selectAllVisible()"
+>
+  ☑️ 全选当前显示
+  <br>
+  Pilih Semua Yang Dipaparkan
+</button>
+
+
+<button
+  class="secondary-button"
+  onclick="clearSelection()"
+>
+  ✖️ 清除选择
+  <br>
+  Kosongkan Pilihan
+</button>
+
+
+<div
+  id="batchMessage"
+></div>
 
       </div>
 
@@ -2538,7 +2604,163 @@ function selectAllUnrecorded() {
   renderStudentList();
 
 }
+/*
+ * =========================================================
+ * 全选当前显示
+ * =========================================================
+ */
 
+function selectAllVisible() {
+
+  if (
+    currentStudents.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentStudents.forEach(
+    student => {
+
+      const status =
+        normalizeDisplayStatus(
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
+        );
+
+
+      /*
+       * 只选择目前筛选结果中
+       * 可以修改的学生
+       */
+
+      let shouldSelect = true;
+
+
+      if (
+        currentFilter === "Unrecorded"
+      ) {
+
+        shouldSelect =
+          status === "Unrecorded";
+
+      }
+
+      else if (
+        currentFilter === "Present"
+      ) {
+
+        shouldSelect =
+          status === "Present";
+
+      }
+
+      else if (
+        currentFilter === "Late"
+      ) {
+
+        shouldSelect =
+          status === "Late";
+
+      }
+
+      else if (
+        currentFilter === "Absent"
+      ) {
+
+        shouldSelect =
+          status === "Absent";
+
+      }
+
+      else if (
+        currentFilter === "Activity"
+      ) {
+
+        shouldSelect =
+          status === "Activity";
+
+      }
+
+      else if (
+        currentFilter === "RMT"
+      ) {
+
+        const rmt =
+          String(
+            student.RMT || ""
+          )
+            .trim()
+            .toUpperCase();
+
+
+        shouldSelect =
+          rmt === "YES" ||
+          rmt === "Y" ||
+          rmt === "是";
+
+      }
+
+
+      if (
+        shouldSelect &&
+        canEditStudent(student)
+      ) {
+
+        const studentID =
+          String(
+            student.StudentID || ""
+          )
+            .trim();
+
+
+        if (
+          studentID
+        ) {
+
+          selectedStudentIDs.add(
+            studentID
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 清除所有选择
+ * =========================================================
+ */
+
+function clearSelection() {
+
+  selectedStudentIDs.clear();
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
 
 /*
  * =========================================================
@@ -3433,7 +3655,321 @@ async function setAttendance(
   }
 
 }
+/*
+ * =========================================================
+ * 批量登记 / 修改出席
+ * =========================================================
+ */
 
+async function batchSetAttendance(
+  status
+) {
+
+  /*
+   * 没有选择学生
+   */
+
+  if (
+    selectedStudentIDs.size === 0
+  ) {
+
+    alert(
+
+      "⚠️ 请先选择学生\n" +
+      "Sila pilih murid dahulu."
+
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !currentTeacher
+  ) {
+
+    return;
+
+  }
+
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  /*
+   * 检查日期
+   */
+
+  if (
+    !selectedDate
+  ) {
+
+    alert(
+
+      "⚠️ 请选择日期\n" +
+      "Sila pilih tarikh."
+
+    );
+
+    return;
+
+  }
+
+
+  const studentIDs =
+    Array.from(
+      selectedStudentIDs
+    );
+
+
+  /*
+   * 确认
+   */
+
+  const confirmText =
+
+    "确定要将 " +
+
+    studentIDs.length +
+
+    " 名学生登记为：\n\n" +
+
+    status +
+
+    "？\n\n" +
+
+    "Adakah anda pasti mahu merekod " +
+
+    studentIDs.length +
+
+    " murid sebagai:\n\n" +
+
+    status +
+
+    "?";
+
+
+  if (
+    !confirm(confirmText)
+  ) {
+
+    return;
+
+  }
+
+
+  const messageBox =
+    document
+      .getElementById(
+        "batchMessage"
+      );
+
+
+  messageBox.innerHTML =
+
+    `<div class="message message-waiting">
+
+      ⏳ 正在批量登记...
+
+      <br>
+
+      Sedang merekod secara berkumpulan...
+
+      <br>
+
+      ${studentIDs.length} 名学生
+
+    </div>`;
+
+
+  /*
+   * 暂时锁住批量按钮
+   */
+
+  const buttons =
+    document.querySelectorAll(
+      "#batchActions button"
+    );
+
+
+  buttons.forEach(
+    button => {
+
+      button.disabled = true;
+
+    }
+  );
+
+
+  try {
+
+    const url =
+
+      API_URL +
+
+      "?action=batchManualAttendance" +
+
+      "&teacherID=" +
+
+      encodeURIComponent(
+        currentTeacher.TeacherID
+      ) +
+
+      "&studentIDs=" +
+
+      encodeURIComponent(
+        JSON.stringify(
+          studentIDs
+        )
+      ) +
+
+      "&status=" +
+
+      encodeURIComponent(
+        status
+      ) +
+
+      "&remark=" +
+
+      encodeURIComponent(
+        ""
+      ) +
+
+      "&selectedDate=" +
+
+      encodeURIComponent(
+        selectedDate
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    console.log(
+      "批量登记结果：",
+      result
+    );
+
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+
+      throw new Error(
+
+        result.message ||
+
+        "批量登记失败"
+
+      );
+
+    }
+
+
+    /*
+     * 成功
+     */
+
+    selectedStudentIDs.clear();
+
+    updateSelectedInfo();
+
+
+    messageBox.innerHTML =
+
+      `<div class="message message-success">
+
+        ✅ 批量登记成功
+
+        <br>
+
+        Rekod berkumpulan berjaya
+
+        <br><br>
+
+        ${result.successCount || 0}
+        名学生已登记
+
+        <br>
+
+        ${result.successCount || 0}
+        murid telah direkodkan
+
+      </div>`;
+
+
+    /*
+     * 重新读取班级资料
+     *
+     * 这样统计数字、
+     * 学生状态、
+     * RMT
+     * 都会马上更新
+     */
+
+    await loadClassAttendance();
+
+
+  }
+
+  catch (error) {
+
+    messageBox.innerHTML =
+
+      `<div class="message message-error">
+
+        ❌ 批量登记失败
+
+        <br>
+
+        Gagal merekod secara berkumpulan
+
+        <br><br>
+
+        <span class="small-text">
+
+          ${escapeHtml(
+            error.message ||
+            String(error)
+          )}
+
+        </span>
+
+      </div>`;
+
+  }
+
+
+  finally {
+
+    buttons.forEach(
+      button => {
+
+        button.disabled = false;
+
+      }
+    );
+
+  }
+
+}
 
 /*
  * =========================================================
