@@ -967,19 +967,54 @@ content="width=device-width, initial-scale=1"
 
     <div class="summary-box">
 
-      🍱 RMT 尚未记录
+<div class="summary">
 
-      <div
-        id="rmtUnrecorded"
-        class="summary-number"
-      >
-        0
-      </div>
+  <div class="summary-box">
 
+    🏫 班级出席率
+
+    <div
+      id="attendanceRate"
+      class="summary-number"
+    >
+      0%
     </div>
 
+  </div>
+
+
+  <div class="summary-box">
+
+    🍱 RMT 出席
+
+    <div
+      id="rmtPresent"
+      class="summary-number"
+    >
+      0 / 0
+    </div>
+
+    Hadir RMT
 
   </div>
+
+
+  <div class="summary-box">
+
+    👥 班级尚未记录
+
+    <div
+      id="unrecordedSummary"
+      class="summary-number"
+    >
+      0 / 0
+    </div>
+
+    Belum Direkodkan
+
+  </div>
+
+</div>
 
 
   <div
@@ -1755,12 +1790,6 @@ function renderAttendance(
   result
 ) {
 
-  /*
-   * =====================================================
-   * 班级名称与日期
-   * =====================================================
-   */
-
   document
     .getElementById(
       "classTitle"
@@ -1798,13 +1827,14 @@ function renderAttendance(
 
   /*
    * =====================================================
-   * 重新计算班级出席人数
+   * 根据学生名单重新计算统计
    *
-   * Present  = 出席
-   * Late     = 迟到
-   * Absent   = 缺席
-   * Activity = 校外活动
-   * Unrecorded = 尚未记录
+   * 这样可以确保：
+   *
+   * 出席 + 迟到 + 缺席 + 校外活动 + 尚未记录
+   * = 全班人数
+   *
+   * 校外活动算入出席人数
    * =====================================================
    */
 
@@ -1819,25 +1849,43 @@ function renderAttendance(
   let unrecordedCount = 0;
 
 
+  /*
+   * RMT
+   */
+
+  let totalRmt = 0;
+
+  let rmtPresent = 0;
+
+
   students.forEach(
     student => {
 
-      let status =
-
-        student.StatusToday ||
-
-        student.AttendanceStatus ||
-
-        student.status ||
-
-        "";
-
-
-      status =
+      const status =
         normalizeDisplayStatus(
-          status
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
         );
 
+
+      const rmt =
+        String(
+          student.RMT || ""
+        )
+          .trim()
+          .toUpperCase();
+
+
+      /*
+       * 全班统计
+       */
 
       if (
         status === "Present"
@@ -1877,33 +1925,46 @@ function renderAttendance(
 
       }
 
+
+      /*
+       * RMT 总人数
+       */
+
+      if (
+        rmt === "YES" ||
+        rmt === "Y" ||
+        rmt === "是"
+      ) {
+
+        totalRmt++;
+
+
+        /*
+         * RMT 出席
+         *
+         * 出席、迟到、校外活动
+         * 都视为当天已经有出席记录
+         */
+
+        if (
+          status === "Present" ||
+          status === "Late" ||
+          status === "Activity"
+        ) {
+
+          rmtPresent++;
+
+        }
+
+      }
+
     }
   );
 
 
   /*
    * =====================================================
-   * 总出席
-   *
-   * 出席 + 迟到 + 校外活动
-   * =====================================================
-   */
-
-  const totalAttended =
-
-    presentCount +
-
-    lateCount +
-
-    activityCount;
-
-
-  /*
-   * =====================================================
-   * 出席率
-   *
-   * 全班学生都作为分母
-   * 尚未记录不会被算作出席
+   * 全班总人数
    * =====================================================
    */
 
@@ -1911,18 +1972,62 @@ function renderAttendance(
     students.length;
 
 
+  /*
+   * =====================================================
+   * 真正的出席人数
+   *
+   * 校外活动也算出席
+   *
+   * Present + Late + Activity
+   * =====================================================
+   */
+
+  const totalPresent =
+    presentCount +
+    lateCount +
+    activityCount;
+
+
+  /*
+   * =====================================================
+   * 出席率
+   *
+   * 尚未记录的学生不算进已完成记录
+   *
+   * 例如：
+   *
+   * 20 出席
+   * 2 迟到
+   * 2 缺席
+   * 8 尚未记录
+   *
+   * 已记录 = 24
+   *
+   * 出席率 =
+   * (20 + 2) / 24
+   *
+   * =====================================================
+   */
+
+  const recordedStudents =
+    presentCount +
+    lateCount +
+    absentCount +
+    activityCount;
+
+
   let attendanceRate = 0;
 
 
   if (
-    totalStudents > 0
+    recordedStudents > 0
   ) {
 
     attendanceRate =
 
       (
-        totalAttended /
-        totalStudents
+        totalPresent /
+        recordedStudents
       ) * 100;
 
   }
@@ -1930,7 +2035,7 @@ function renderAttendance(
 
   /*
    * =====================================================
-   * 显示人数
+   * 显示四个主要统计
    * =====================================================
    */
 
@@ -1940,8 +2045,7 @@ function renderAttendance(
     )
     .textContent =
 
-      presentCount +
-      activityCount;
+      totalPresent;
 
 
   document
@@ -1977,22 +2081,24 @@ function renderAttendance(
     )
     .textContent =
 
-      attendanceRate.toFixed(1) +
+      attendanceRate
+        .toFixed(1) +
+
       "%";
 
 
   /*
    * =====================================================
    * RMT
-   * =====================================================
    *
-   * RMT 独立计算，不影响班级总出席人数
+   * 例如：
+   *
+   * 2 / 3
+   *
+   * 2 = RMT 已有出席记录
+   * 3 = 全部 RMT 学生
    * =====================================================
    */
-
-  const rmt =
-    result.rmt || {};
-
 
   document
     .getElementById(
@@ -2000,25 +2106,37 @@ function renderAttendance(
     )
     .textContent =
 
-      rmt.present || 0;
+      rmtPresent +
 
+      " / " +
+
+      totalRmt;
+
+
+  /*
+   * =====================================================
+   * 全班尚未记录
+   *
+   * 例如：
+   *
+   * 8 / 32
+   *
+   * 8 = 尚未记录
+   * 32 = 全班人数
+   * =====================================================
+   */
 
   document
     .getElementById(
-      "rmtAbsent"
+      "unrecordedSummary"
     )
     .textContent =
 
-      rmt.absent || 0;
+      unrecordedCount +
 
+      " / " +
 
-  document
-    .getElementById(
-      "rmtUnrecorded"
-    )
-    .textContent =
-
-      rmt.unrecorded || 0;
+      totalStudents;
 
 
   /*
@@ -2034,7 +2152,7 @@ function renderAttendance(
 
   /*
    * =====================================================
-   * 学生列表
+   * 学生名单
    * =====================================================
    */
 
@@ -2055,9 +2173,13 @@ function renderAttendance(
     list.innerHTML =
 
       `<div class="message message-waiting">
+
         没有学生资料
+
         <br>
+
         Tiada maklumat murid
+
       </div>`;
 
     return;
@@ -2065,17 +2187,8 @@ function renderAttendance(
   }
 
 
-  /*
-   * =====================================================
-   * 显示每一位学生
-   * =====================================================
-   */
-
   students.forEach(
-    (
-      student,
-      index
-    ) => {
+    (student, index) => {
 
       list.appendChild(
 
