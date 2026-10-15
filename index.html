@@ -1,241 +1,5372 @@
-/**
- * 辅助工具函数：安全转为字符串并去除首尾空格
- */
-function cleanStr(val) {
-  if (val === null || val === undefined) return "";
-  return String(val).trim();
-}
+<!DOCTYPE html>
 
-/**
- * 通用学生查找工具（优先条形码，其次 StudentID）
- */
-function findStudentUniversal(input) {
-  if (!input) return null;
-  let student = findStudentByBarcode(input);
-  if (!student) {
-    student = findStudentByID(input);
-  }
-  return student;
-}
+<html lang="zh-CN">
 
-/**
- * 查找学生 (通过 StudentID - A列)
- */
-function findStudentByID(studentID) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Student");
-  if (!sheet) throw new Error("Student sheet not found.");
+<head>
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
+  <meta charset="UTF-8">
 
-  for (let i = 1; i < data.length; i++) {
-    if (cleanStr(data[i][0]) === cleanStr(studentID)) {
-      const student = {};
-      for (let j = 0; j < headers.length; j++) {
-        student[headers[j]] = data[i][j];
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>School Attendance</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+
+      margin: 0;
+
+      padding: 15px;
+
+      font-family:
+        Arial,
+        "Noto Sans SC",
+        sans-serif;
+
+      background: #f3f4f6;
+
+      color: #111827;
+
+    }
+
+    .container {
+
+      max-width: 700px;
+
+      margin: auto;
+
+    }
+
+    .card {
+
+      background: white;
+
+      padding: 20px;
+
+      margin-bottom: 15px;
+
+      border-radius: 18px;
+
+      box-shadow:
+        0 4px 10px rgba(0,0,0,0.08);
+
+    }
+
+    h1 {
+
+      margin: 0 0 8px;
+
+      text-align: center;
+
+      font-size: 28px;
+
+    }
+
+    h2 {
+
+      margin-top: 0;
+
+    }
+
+    .subtitle {
+
+      text-align: center;
+
+      color: #6b7280;
+
+      line-height: 1.6;
+
+      margin-bottom: 20px;
+
+    }
+
+    button {
+
+      width: 100%;
+
+      padding: 14px;
+
+      margin-top: 10px;
+
+      border: none;
+
+      border-radius: 12px;
+
+      font-size: 16px;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+    }
+
+    .login-button {
+
+      background: #2563eb;
+
+      color: white;
+
+      font-size: 18px;
+
+      padding: 18px;
+
+    }
+
+    .teacher-button {
+
+      background: #16a34a;
+
+      color: white;
+
+      font-size: 18px;
+
+      padding: 18px;
+
+    }
+
+    .secondary-button {
+
+      background: #e5e7eb;
+
+      color: #111827;
+
+    }
+
+    .danger-button {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+    input,
+    select {
+
+      width: 100%;
+
+      padding: 13px;
+
+      margin-top: 6px;
+
+      margin-bottom: 12px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 10px;
+
+      font-size: 16px;
+
+      background: white;
+
+    }
+
+    label {
+
+      display: block;
+
+      text-align: left;
+
+      font-weight: bold;
+
+      margin-top: 8px;
+
+    }
+
+    .hidden {
+
+      display: none !important;
+
+    }
+
+    .user-info {
+
+      background: #eff6ff;
+
+      padding: 15px;
+
+      border-radius: 12px;
+
+      margin-bottom: 15px;
+
+      line-height: 1.8;
+
+    }
+
+    .date-box {
+
+      text-align: center;
+
+      background: #f9fafb;
+
+      padding: 14px;
+
+      border-radius: 12px;
+
+      margin-bottom: 15px;
+
+      font-weight: bold;
+
+    }
+
+    .summary {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 10px;
+
+      margin: 15px 0;
+
+    }
+
+    .summary-box {
+
+      padding: 15px;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+      background: #f3f4f6;
+
+    }
+
+    .summary-number {
+
+      font-size: 25px;
+
+      font-weight: bold;
+
+      margin-top: 5px;
+
+    }
+
+    /*
+     * =====================================================
+     * 学生筛选
+     * =====================================================
+     */
+
+    .filter-box {
+
+      background: #f9fafb;
+
+      padding: 12px;
+
+      border-radius: 12px;
+
+      margin-top: 15px;
+
+      margin-bottom: 15px;
+
+    }
+
+    .filter-title {
+
+      font-weight: bold;
+
+      margin-bottom: 8px;
+
+    }
+
+    .filter-buttons {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 7px;
+
+    }
+
+    .filter-button {
+
+      margin: 0;
+
+      padding: 10px 5px;
+
+      background: white;
+
+      border: 1px solid #d1d5db;
+
+      color: #374151;
+
+      font-size: 14px;
+
+    }
+
+    .filter-button.active {
+
+      background: #2563eb;
+
+      color: white;
+
+      border-color: #2563eb;
+
+    }
+
+    .select-all-button {
+
+      background: #fef3c7;
+
+      color: #92400e;
+
+      margin-top: 10px;
+
+    }
+
+    .selected-info {
+
+      text-align: center;
+
+      margin-top: 10px;
+
+      font-weight: bold;
+
+      color: #2563eb;
+
+    }
+
+    /*
+     * =====================================================
+     * 学生卡片
+     * =====================================================
+     */
+
+    .student-card {
+
+      border: 1px solid #e5e7eb;
+
+      border-radius: 14px;
+
+      padding: 14px;
+
+      margin-top: 10px;
+
+      text-align: left;
+
+      position: relative;
+
+    }
+
+    .student-card.selected {
+
+      border: 2px solid #2563eb;
+
+      background: #eff6ff;
+
+    }
+
+    .student-select-row {
+
+      display: flex;
+
+      align-items: flex-start;
+
+      gap: 10px;
+
+    }
+
+    .student-checkbox {
+
+      width: 22px;
+
+      height: 22px;
+
+      margin: 2px 0 0 0;
+
+      flex-shrink: 0;
+
+      cursor: pointer;
+
+    }
+
+    .student-content {
+
+      flex: 1;
+
+      min-width: 0;
+
+    }
+
+    .student-name {
+
+      font-size: 18px;
+
+      font-weight: bold;
+
+    }
+
+    .student-name-en {
+
+      color: #4b5563;
+
+      margin-top: 3px;
+
+    }
+
+    .student-detail {
+
+      color: #6b7280;
+
+      font-size: 13px;
+
+      margin-top: 5px;
+
+    }
+
+    .rmt-badge {
+
+      display: inline-block;
+
+      margin-left: 5px;
+
+      padding: 3px 7px;
+
+      border-radius: 8px;
+
+      background: #fef3c7;
+
+      color: #92400e;
+
+      font-size: 12px;
+
+      font-weight: bold;
+
+    }
+
+    .status {
+
+      margin-top: 10px;
+
+      padding: 10px;
+
+      border-radius: 10px;
+
+      text-align: center;
+
+      font-weight: bold;
+
+    }
+
+    .status-unrecorded {
+
+      background: #f3f4f6;
+
+      color: #4b5563;
+
+    }
+
+    .status-present {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+    }
+
+    .status-late {
+
+      background: #fef9c3;
+
+      color: #92400e;
+
+    }
+
+    .status-absent {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+    .status-activity {
+
+      background: #dbeafe;
+
+      color: #1e40af;
+
+    }
+
+    .student-actions {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 7px;
+
+      margin-top: 10px;
+
+    }
+
+    .student-actions button {
+
+      margin: 0;
+
+      padding: 10px 5px;
+
+      font-size: 14px;
+
+    }
+
+    .present-button {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+    }
+
+    .late-button {
+
+      background: #fef9c3;
+
+      color: #92400e;
+
+    }
+
+    .absent-button {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+    .activity-button {
+
+      background: #dbeafe;
+
+      color: #1e40af;
+
+    }
+
+    .message {
+
+      padding: 15px;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+      margin-top: 10px;
+
+      line-height: 1.6;
+
+    }
+
+    .message-success {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+    }
+
+    .message-error {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+    .message-waiting {
+
+      background: #f3f4f6;
+
+      color: #4b5563;
+
+    }
+
+    #reader {
+
+      width: 100%;
+
+      margin: auto;
+
+    }
+
+    .camera-buttons {
+
+      display: flex;
+
+      gap: 10px;
+
+    }
+
+    .camera-button {
+
+      flex: 1;
+
+      background: #e5e7eb;
+
+      color: #111827;
+
+    }
+
+    .camera-button.active {
+
+      outline: 3px solid #111827;
+
+    }
+
+    #scanResult {
+
+      margin-top: 15px;
+
+      padding: 20px;
+
+      border-radius: 12px;
+
+      min-height: 130px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      flex-direction: column;
+
+      text-align: center;
+
+      line-height: 1.6;
+
+      font-weight: bold;
+
+    }
+
+    .scan-waiting {
+
+      background: #f3f4f6;
+
+      color: #555;
+
+    }
+
+    .scan-success {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+    }
+
+    .scan-error {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+    .scan-late {
+
+      background: #fef9c3;
+
+      color: #92400e;
+
+    }
+
+    .student-name-c {
+
+      font-size: 28px;
+
+      margin-bottom: 5px;
+
+    }
+
+    .small-text {
+
+      font-size: 13px;
+
+      color: #6b7280;
+
+      font-weight: normal;
+
+    }
+
+    .logout {
+
+      margin-top: 20px;
+
+    }
+
+    @media (
+      max-width: 500px
+    ) {
+
+      body {
+        padding: 10px;
       }
-      return student;
-    }
-  }
-  return null;
-}
 
-/**
- * 查找学生 (通过 条形码/二维码 - J列)
- */
-function findStudentByBarcode(barcode) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Student");
-  if (!sheet) throw new Error("Student sheet not found.");
-
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const barcodeIndex = headers.indexOf("Barcode"); // 自动定位到 J 列
-
-  if (barcodeIndex === -1) throw new Error("Barcode column not found in headers.");
-
-  const targetBarcode = cleanStr(barcode);
-  for (let i = 1; i < data.length; i++) {
-    if (cleanStr(data[i][barcodeIndex]) === targetBarcode) {
-      const student = {};
-      for (let j = 0; j < headers.length; j++) {
-        student[headers[j]] = data[i][j];
+      .card {
+        padding: 15px;
       }
-      return student;
+
+      .summary {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
+      .filter-buttons {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
     }
-  }
-  return null;
+
+  </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+
+  <!-- =====================================================
+       LOGIN PAGE
+       ===================================================== -->
+
+  <div
+    id="loginPage"
+    class="card"
+  >
+
+    <h1>
+      🏫 School Attendance
+    </h1>
+
+    <div class="subtitle">
+
+      请选择登录身份
+
+      <br>
+
+      Sila pilih jenis log masuk
+
+    </div>
+
+
+    <button
+      class="login-button"
+      onclick="showStaffPage()"
+    >
+
+      👤 工作人员打卡
+
+      <br>
+
+      Staf Kehadiran
+
+    </button>
+
+
+    <button
+      class="teacher-button"
+      onclick="showTeacherLogin()"
+    >
+
+      👩‍🏫 教师登录
+
+      <br>
+
+      Log Masuk Guru
+
+    </button>
+
+  </div>
+
+
+  <!-- =====================================================
+       TEACHER LOGIN
+       ===================================================== -->
+
+  <div
+    id="teacherLoginPage"
+    class="card hidden"
+  >
+
+    <h2>
+      👩‍🏫 教师登录
+    </h2>
+
+    <div class="subtitle">
+
+      输入教师编号
+
+      <br>
+
+      Masukkan ID Guru
+
+    </div>
+
+
+    <label>
+      教师编号 / ID Guru
+    </label>
+
+    <input
+      id="teacherIDInput"
+      type="text"
+      placeholder="例如 T001"
+    >
+
+
+    <button
+      class="teacher-button"
+      onclick="teacherLogin()"
+    >
+
+      登录
+
+      <br>
+
+      Log Masuk
+
+    </button>
+
+
+    <button
+      class="secondary-button"
+      onclick="backToLogin()"
+    >
+
+      返回
+
+      <br>
+
+      Kembali
+
+    </button>
+
+
+    <div
+      id="teacherLoginMessage"
+    ></div>
+
+  </div>
+
+
+  <!-- =====================================================
+       TEACHER PAGE
+       ===================================================== -->
+
+  <div
+    id="teacherPage"
+    class="hidden"
+  >
+
+    <div class="card">
+
+      <h1>
+        👩‍🏫 教师出席记录
+      </h1>
+
+
+      <div
+        id="teacherInfo"
+        class="user-info"
+      ></div>
+
+
+      <div
+        id="todayDate"
+        class="date-box"
+      ></div>
+
+
+      <label>
+        选择班级 / Pilih Kelas
+      </label>
+
+
+      <select
+        id="classSelect"
+        onchange="loadClassAttendance()"
+      >
+
+        <option value="">
+          请选择班级 / Sila pilih kelas
+        </option>
+
+      </select>
+
+
+      <label>
+        日期 / Tarikh
+      </label>
+
+
+      <input
+        id="attendanceDate"
+        type="date"
+        onchange="loadClassAttendance()"
+      >
+
+
+      <div
+        id="permissionMessage"
+        class="message message-waiting"
+      >
+      </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUMMARY
+         ===================================================== -->
+
+    <div
+      id="attendanceSection"
+      class="card hidden"
+    >
+
+      <h2>
+        📊 班级出席情况
+      </h2>
+
+
+      <div
+        id="classTitle"
+        class="date-box"
+      ></div>
+
+
+      <!-- 第一排 -->
+
+      <div class="summary">
+
+
+        <div class="summary-box">
+
+          🟢 出席
+
+          <div
+            id="presentCount"
+            class="summary-number"
+          >
+            0
+          </div>
+
+          Hadir
+
+        </div>
+
+
+        <div class="summary-box">
+
+          🟡 迟到
+
+          <div
+            id="lateCount"
+            class="summary-number"
+          >
+            0
+          </div>
+
+          Lewat
+
+        </div>
+
+
+        <div class="summary-box">
+
+          🔴 缺席
+
+          <div
+            id="absentCount"
+            class="summary-number"
+          >
+            0
+          </div>
+
+          Tidak Hadir
+
+        </div>
+
+
+        <div class="summary-box">
+
+          🔵 校外活动
+
+          <div
+            id="activityCount"
+            class="summary-number"
+          >
+            0
+          </div>
+
+          Aktiviti Luar Sekolah
+
+        </div>
+
+
+      </div>
+
+
+      <!-- 第二排 -->
+
+      <div class="summary">
+
+
+        <div class="summary-box">
+
+          🏫 班级出席率
+
+          <div
+            id="attendanceRate"
+            class="summary-number"
+          >
+            0%
+          </div>
+
+        </div>
+
+
+        <div class="summary-box">
+
+          🍱 RMT 出席
+
+          <div
+            id="rmtPresent"
+            class="summary-number"
+          >
+            0 / 0
+          </div>
+
+          Hadir RMT
+
+        </div>
+
+
+        <div class="summary-box">
+
+          👥 班级尚未记录
+
+          <div
+            id="unrecordedSummary"
+            class="summary-number"
+          >
+            0 / 0
+          </div>
+
+          Belum Direkodkan
+
+        </div>
+
+
+      </div>
+
+
+      <!-- =====================================================
+           学生筛选
+           ===================================================== -->
+
+      <div class="filter-box">
+
+        <div class="filter-title">
+
+          🔎 学生筛选 / Tapis Murid
+
+        </div>
+
+
+        <div class="filter-buttons">
+
+
+          <button
+            id="filterAll"
+            class="filter-button active"
+            onclick="setStudentFilter('All')"
+          >
+
+            全部
+
+            <br>
+
+            Semua
+
+          </button>
+
+
+          <button
+            id="filterUnrecorded"
+            class="filter-button"
+            onclick="setStudentFilter('Unrecorded')"
+          >
+
+            尚未记录
+
+            <br>
+
+            Belum Direkodkan
+
+          </button>
+
+
+          <button
+            id="filterPresent"
+            class="filter-button"
+            onclick="setStudentFilter('Present')"
+          >
+
+            出席
+
+            <br>
+
+            Hadir
+
+          </button>
+
+
+          <button
+            id="filterLate"
+            class="filter-button"
+            onclick="setStudentFilter('Late')"
+          >
+
+            迟到
+
+            <br>
+
+            Lewat
+
+          </button>
+
+
+          <button
+            id="filterAbsent"
+            class="filter-button"
+            onclick="setStudentFilter('Absent')"
+          >
+
+            缺席
+
+            <br>
+
+            Tidak Hadir
+
+          </button>
+
+
+          <button
+            id="filterActivity"
+            class="filter-button"
+            onclick="setStudentFilter('Activity')"
+          >
+
+            校外活动
+
+            <br>
+
+            Aktiviti Luar
+
+          </button>
+
+
+          <button
+            id="filterRmt"
+            class="filter-button"
+            onclick="setStudentFilter('RMT')"
+          >
+
+            🍱 RMT
+
+          </button>
+
+
+        </div>
+
+
+        <button
+          class="select-all-button"
+          onclick="selectAllUnrecorded()"
+        >
+
+          ☑️ 全选尚未记录
+
+          <br>
+
+          Pilih Semua Belum Direkodkan
+
+        </button>
+
+
+        <div
+          id="selectedInfo"
+          class="selected-info"
+        >
+
+          已选择 0 人
+
+          <br>
+
+          0 murid dipilih
+
+        </div>
+<div
+  class="student-actions"
+  id="batchActions"
+>
+
+  <button
+    class="present-button"
+    onclick="batchSetAttendance('出席 Hadir')"
+  >
+    🟢 批量出席
+    <br>
+    Hadir
+  </button>
+
+  <button
+    class="late-button"
+    onclick="batchSetAttendance('迟到 Lewat')"
+  >
+    🟡 批量迟到
+    <br>
+    Lewat
+  </button>
+
+  <button
+    class="absent-button"
+    onclick="batchSetAttendance('缺席 Tidak Hadir')"
+  >
+    🔴 批量缺席
+    <br>
+    Tidak Hadir
+  </button>
+
+  <button
+    class="activity-button"
+    onclick="batchSetAttendance('校外活动 Aktiviti Luar Sekolah')"
+  >
+    🔵 批量校外活动
+    <br>
+    Aktiviti Luar Sekolah
+  </button>
+
+</div>
+
+
+<button
+  class="secondary-button"
+  onclick="selectAllVisible()"
+>
+  ☑️ 全选当前显示
+  <br>
+  Pilih Semua Yang Dipaparkan
+</button>
+
+
+<button
+  class="secondary-button"
+  onclick="clearSelection()"
+>
+  ✖️ 清除选择
+  <br>
+  Kosongkan Pilihan
+</button>
+
+
+<div
+  id="batchMessage"
+></div>
+
+      </div>
+
+
+      <div
+        id="studentList"
+      ></div>
+
+
+      <button
+        class="danger-button logout"
+        onclick="logout()"
+      >
+
+        🚪 登出
+
+        <br>
+
+        Log Keluar
+
+      </button>
+
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       STAFF SCANNER
+       ===================================================== -->
+
+  <div
+    id="staffPage"
+    class="hidden"
+  >
+
+    <div class="card">
+
+
+      <h1>
+        📷 工作人员打卡
+      </h1>
+
+
+      <div class="subtitle">
+
+        扫描学生 QR Code
+
+        <br>
+
+        Imbas QR Kod Murid
+
+      </div>
+
+
+      <div
+        id="reader"
+      ></div>
+
+
+      <div class="camera-buttons">
+
+
+        <button
+          id="backButton"
+          class="camera-button"
+          onclick="changeCamera('back')"
+        >
+
+          📷 后置镜头
+
+          <br>
+
+          Kamera Belakang
+
+        </button>
+
+
+        <button
+          id="frontButton"
+          class="camera-button"
+          onclick="changeCamera('front')"
+        >
+
+          🤳 前置镜头
+
+          <br>
+
+          Kamera Hadapan
+
+        </button>
+
+
+      </div>
+
+
+      <div
+        id="scanResult"
+        class="scan-waiting"
+      >
+
+        ⏳ 正在加载学生资料...
+
+        <br>
+
+        Memuatkan maklumat murid...
+
+      </div>
+
+
+      <button
+        class="danger-button"
+        onclick="logout()"
+      >
+
+        🚪 返回
+
+        <br>
+
+        Kembali
+
+      </button>
+
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+
+/*
+ * =========================================================
+ * API
+ * =========================================================
+ */
+
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwdK4-0DDAvOhwIn8d_bPTmmKGMO7myI6gWkNUIMT7FIcHvaX2KDMRVup8bnDOhMIBk/exec";
+
+
+/*
+ * =========================================================
+ * 全局资料
+ * =========================================================
+ */
+
+let currentTeacher = null;
+
+let studentCache = {};
+
+let localCheckedSet =
+  new Set();
+
+let attendanceStatusMap =
+  {};
+
+let scanner = null;
+
+let cameras = [];
+
+let currentCamera = null;
+
+let lastCode = "";
+
+let isProcessing = false;
+
+let isSwitching = false;
+
+
+/*
+ * =========================================================
+ * 教师页面资料
+ * =========================================================
+ */
+
+let currentStudents = [];
+
+let currentFilter = "All";
+
+let selectedStudentIDs =
+  new Set();
+
+
+/*
+ * =========================================================
+ * 页面
+ * =========================================================
+ */
+
+function hideAllPages() {
+
+  document
+    .getElementById("loginPage")
+    .classList
+    .add("hidden");
+
+  document
+    .getElementById("teacherLoginPage")
+    .classList
+    .add("hidden");
+
+  document
+    .getElementById("teacherPage")
+    .classList
+    .add("hidden");
+
+  document
+    .getElementById("staffPage")
+    .classList
+    .add("hidden");
+
 }
 
-/**
- * 获取系统配置项
- */
-function getSetting(settingName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Setting");
-  if (!sheet) throw new Error("Setting sheet not found.");
 
-  const displayData = sheet.getDataRange().getDisplayValues();
-  for (let i = 1; i < displayData.length; i++) {
-    if (cleanStr(displayData[i][0]) === cleanStr(settingName)) {
-      return displayData[i][1];
-    }
-  }
-  return null;
+function backToLogin() {
+
+  hideAllPages();
+
+  document
+    .getElementById("loginPage")
+    .classList
+    .remove("hidden");
+
 }
 
-/**
- * 时间转换辅助函数：精准将任意格式的时间转为当天第几分钟
- */
-function parseToMinutes(timeVal, timeZone) {
-  if (timeVal === null || timeVal === undefined || timeVal === "") {
-    return 7 * 60 + 30; // 默认 07:30
-  }
-  if (timeVal instanceof Date) {
-    const formatted = Utilities.formatDate(timeVal, timeZone, "HH:mm");
-    const parts = formatted.split(":");
-    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-  }
-  const str = cleanStr(timeVal);
-  const timeMatch = str.match(/(\d{1,2}):(\d{2})/);
-  if (timeMatch) {
-    const hours = parseInt(timeMatch[1], 10);
-    const minutes = parseInt(timeMatch[2], 10);
-    return hours * 60 + minutes;
-  }
-  return 7 * 60 + 30;
+
+function showTeacherLogin() {
+
+  hideAllPages();
+
+  document
+    .getElementById("teacherLoginPage")
+    .classList
+    .remove("hidden");
+
+  document
+    .getElementById("teacherIDInput")
+    .focus();
+
 }
 
-/**
- * 扫码自动记录考勤 (高并发安全高效版)
- */
-function recordAttendance(studentIDOrBarcode, method) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Attendance");
-  if (!sheet) throw new Error("Attendance sheet not found.");
 
-  // 优先通过条形码/二维码找到真正的 StudentID
-  let realStudentID = studentIDOrBarcode;
-  let student = findStudentUniversal(studentIDOrBarcode);
-  if (student && student.StudentID) {
-    realStudentID = student.StudentID;
-  } else {
-    return { success: false, message: "找不到该学生资料 / Murid tidak dijumpai." };
+function showStaffPage() {
+
+  hideAllPages();
+
+  document
+    .getElementById("staffPage")
+    .classList
+    .remove("hidden");
+
+  loadStudents()
+    .finally(
+      () => {
+
+        startScanner();
+
+      }
+    );
+
+}
+
+
+function logout() {
+
+  stopScanner();
+
+  currentTeacher = null;
+
+  attendanceStatusMap = {};
+
+  currentStudents = [];
+
+  selectedStudentIDs.clear();
+
+  currentFilter = "All";
+
+  hideAllPages();
+
+  document
+    .getElementById("loginPage")
+    .classList
+    .remove("hidden");
+
+}
+
+
+/*
+ * =========================================================
+ * 日期
+ * =========================================================
+ */
+
+function updateTodayDate() {
+
+  const now =
+    new Date();
+
+  const weekdays = [
+
+    "星期日 / Ahad",
+
+    "星期一 / Isnin",
+
+    "星期二 / Selasa",
+
+    "星期三 / Rabu",
+
+    "星期四 / Khamis",
+
+    "星期五 / Jumaat",
+
+    "星期六 / Sabtu"
+
+  ];
+
+
+  const dateText =
+
+    now.getFullYear() +
+
+    "年" +
+
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0") +
+
+    "月" +
+
+    String(
+      now.getDate()
+    ).padStart(2, "0") +
+
+    "日";
+
+
+  document
+    .getElementById("todayDate")
+    .innerHTML =
+
+      "📅 " +
+
+      dateText +
+
+      "<br>" +
+
+      weekdays[
+        now.getDay()
+      ];
+
+
+  document
+    .getElementById("attendanceDate")
+    .value =
+
+      now.getFullYear() +
+
+      "-" +
+
+      String(
+        now.getMonth() + 1
+      ).padStart(2, "0") +
+
+      "-" +
+
+      String(
+        now.getDate()
+      ).padStart(2, "0");
+
+}
+
+
+updateTodayDate();
+
+
+/*
+ * =========================================================
+ * 教师登录
+ * =========================================================
+ */
+
+async function teacherLogin() {
+
+  const teacherID =
+    document
+      .getElementById(
+        "teacherIDInput"
+      )
+      .value
+      .trim();
+
+
+  const message =
+    document
+      .getElementById(
+        "teacherLoginMessage"
+      );
+
+
+  if (!teacherID) {
+
+    message.innerHTML =
+
+      `<div class="message message-error">
+        请输入教师编号
+        <br>
+        Sila masukkan ID Guru
+      </div>`;
+
+    return;
+
   }
 
-  const timeZone = ss.getSpreadsheetTimeZone();
-  const now = new Date();
-  const today = Utilities.formatDate(now, timeZone, "yyyy-MM-dd");
-  const scanTime = Utilities.formatDate(now, timeZone, "HH:mm:ss");
-  const createdAt = Utilities.formatDate(now, timeZone, "yyyy-MM-dd HH:mm:ss");
 
-  // 将等待时间延长至 15 秒，确保高峰期高并发不崩溃
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
+  message.innerHTML =
+
+    `<div class="message message-waiting">
+      正在登录...
+      <br>
+      Sedang log masuk...
+    </div>`;
+
 
   try {
-    // 使用 getDisplayValues 自动统一并格式化所有日期文本，彻底解决重复打卡漏检问题
-    const displayValues = sheet.getDataRange().getDisplayValues();
-    const targetID = cleanStr(realStudentID);
 
-    // 1. 检查今天是否重复打卡
-    for (let i = 1; i < displayValues.length; i++) {
-      const recordDateText = cleanStr(displayValues[i][0]); // 第一列：日期
-      const recordStudentID = cleanStr(displayValues[i][1]); // 第二列：StudentID
+    const url =
 
-      if (recordDateText === today && recordStudentID === targetID) {
-        return {
-          success: false,
-          alreadyCheckedIn: true,
-          message: "今天已经点过名了！ / Sudah check-in today.",
-          studentID: realStudentID
-        };
-      }
+      API_URL +
+
+      "?action=teacher&teacherID=" +
+
+      encodeURIComponent(
+        teacherID
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      !result ||
+      result.success !== true ||
+      !result.teacher
+    ) {
+
+      throw new Error(
+        result.message ||
+        "教师资料不存在"
+      );
+
     }
 
-    // 2. 计算当前时间和设定的 LateTime 分钟数进行判定
-    const nowMinutes = parseToMinutes(now, timeZone);
-    const settingLateVal = getSetting("LateTime");
-    const lateTimeMinutes = parseToMinutes(settingLateVal, timeZone);
-    
-    const status = (nowMinutes >= lateTimeMinutes) ? "迟到 Lewat" : "出席 Hadir";
 
-    // 3. 写入 Attendance 表
-    sheet.appendRow([
-      today,
-      realStudentID,
-      scanTime,
-      status,
-      method || "QR",
-      "", "", "", // 留给老师后续手动修改的备注等空位
-      createdAt
-    ]);
+    currentTeacher =
+      result.teacher;
 
-    // 4. 写入 AttendanceLog 日志表
-    const logSheet = ss.getSheetByName("AttendanceLog");
-    if (logSheet) {
-      logSheet.appendRow([
-        Utilities.getUuid(),
-        now,
-        realStudentID,
-        "ATTENDANCE",
-        method || "QR",
-        status,
+
+    document
+      .getElementById(
+        "teacherInfo"
+      )
+      .innerHTML =
+
+      "👩‍🏫 教师：" +
+
+      escapeHtml(
+        currentTeacher.TeacherName ||
         ""
-      ]);
-    }
+      ) +
 
-    return {
-      success: true,
-      message: "考勤记录成功！",
-      studentID: realStudentID,
-      status: status,
-      scanTime: scanTime
-    };
+      "<br>" +
 
-  } finally {
-    lock.releaseLock(); // 释放锁
+      "🆔 教师编号：" +
+
+      escapeHtml(
+        currentTeacher.TeacherID ||
+        teacherID
+      );
+
+
+    hideAllPages();
+
+
+    document
+      .getElementById(
+        "teacherPage"
+      )
+      .classList
+      .remove("hidden");
+
+
+    await loadClasses();
+
+
   }
+
+  catch (error) {
+
+    message.innerHTML =
+
+      `<div class="message message-error">
+        ❌ 登录失败
+        <br>
+        Gagal log masuk
+        <br>
+        <span class="small-text">
+          ${escapeHtml(
+            error.message ||
+            String(error)
+          )}
+        </span>
+      </div>`;
+
+  }
+
 }
 
-/**
- * Web App POST 请求入口（连接 GitHub 前端的桥梁）
+
+/*
+ * =========================================================
+ * 取得班级
+ * =========================================================
  */
-function doPost(e) {
+
+async function loadClasses() {
+
+  const select =
+    document.getElementById("classSelect");
+
+  select.innerHTML =
+    `<option value="">
+      正在加载班级... / Memuatkan kelas...
+    </option>`;
+
   try {
-    const requestData = JSON.parse(e.postData.contents);
-    const barcode = requestData.token || requestData.barcode;
-    const method = requestData.method || "QR";
 
-    if (!barcode) {
-      return ContentService.createTextOutput(JSON.stringify({ success: false, message: "无扫码数据" }))
-              .setMimeType(ContentService.MimeType.JSON);
+    const url =
+      API_URL + "?action=classes";
+
+    console.log("Loading classes from:");
+    console.log(url);
+
+    const response =
+      await fetch(url, {
+        cache: "no-store"
+      });
+
+    console.log("Response status:");
+    console.log(response.status);
+
+    if (!response.ok) {
+      throw new Error(
+        "HTTP " + response.status
+      );
     }
 
-    // 执行点名
-    const result = recordAttendance(barcode, method);
+    const result =
+      await response.json();
 
-    // 点名成功后，额外附带学生详尽资料返回给前端大屏展示
-    if (result.success || result.alreadyCheckedIn) {
-      const student = findStudentUniversal(barcode);
-      if (student) {
-        result.fullNameC = student.FullNameC || "";
-        result.fullNameE = student.FullName || "";
-        result.className = student.Class || "";
-        result.rmtStatus = student.RMT || "";
+    console.log("Classes result:");
+    console.log(result);
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+
+      throw new Error(
+        result && result.message
+          ? result.message
+          : "无法取得班级 / Gagal mendapatkan kelas"
+      );
+
+    }
+
+    select.innerHTML =
+      `<option value="">
+        请选择班级 / Sila pilih kelas
+      </option>`;
+
+    const classes =
+      result.classes || [];
+
+    if (classes.length === 0) {
+
+      select.innerHTML =
+        `<option value="">
+          没有班级资料 / Tiada data kelas
+        </option>`;
+
+      throw new Error(
+        "没有取得任何班级资料 / Tiada data kelas"
+      );
+    }
+
+    classes.forEach(
+      className => {
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          className;
+
+        option.textContent =
+          className;
+
+        select.appendChild(option);
+
       }
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "loadClasses error:",
+      error
+    );
+
+    select.innerHTML =
+      `<option value="">
+        无法加载班级 / Gagal memuatkan kelas
+      </option>`;
+
+    showTeacherMessage(
+      "❌ 无法加载班级 / Gagal memuatkan kelas" +
+      "<br>" +
+      "<span class='small-text'>" +
+      escapeHtml(
+        error.message || String(error)
+      ) +
+      "</span>"
+    );
+
+  }
+
+}
+
+
+/*
+ * =========================================================
+ * 班级出席
+ * =========================================================
+ */
+
+async function loadClassAttendance() {
+
+  const classID =
+    document
+      .getElementById(
+        "classSelect"
+      )
+      .value;
+
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  const section =
+    document
+      .getElementById(
+        "attendanceSection"
+      );
+
+
+  selectedStudentIDs.clear();
+
+  updateSelectedInfo();
+
+
+  if (
+    !classID
+  ) {
+
+    section
+      .classList
+      .add("hidden");
+
+    currentStudents = [];
+
+    return;
+
+  }
+
+
+  section
+    .classList
+    .remove("hidden");
+
+
+  document
+    .getElementById(
+      "studentList"
+    )
+    .innerHTML =
+
+    `<div class="message message-waiting">
+      ⏳ 正在加载出席记录...
+      <br>
+      Memuatkan rekod kehadiran...
+    </div>`;
+
+
+  try {
+
+    const url =
+
+      API_URL +
+
+      "?action=classAttendance" +
+
+      "&teacherID=" +
+
+      encodeURIComponent(
+        currentTeacher.TeacherID
+      ) +
+
+      "&classID=" +
+
+      encodeURIComponent(
+        classID
+      ) +
+
+      "&selectedDate=" +
+
+      encodeURIComponent(
+        selectedDate
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+
+      throw new Error(
+        result.message ||
+        "无法取得出席记录"
+      );
+
     }
 
-    return ContentService.createTextOutput(JSON.stringify(result))
-            .setMimeType(ContentService.MimeType.JSON);
 
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "后端系统崩溃: " + error.toString() }))
-            .setMimeType(ContentService.MimeType.JSON);
+    renderAttendance(
+      result
+    );
+
+
   }
+
+  catch (error) {
+
+    document
+      .getElementById(
+        "studentList"
+      )
+      .innerHTML =
+
+      `<div class="message message-error">
+        ❌ 无法取得出席记录
+        <br>
+        Gagal mendapatkan rekod kehadiran
+        <br>
+        <span class="small-text">
+          ${escapeHtml(
+            error.message ||
+            String(error)
+          )}
+        </span>
+      </div>`;
+
+  }
+
 }
 
-function doGet() {
-  return HtmlService.createHtmlOutput("<h1>Attendance API Running</h1>");
+
+/*
+ * =========================================================
+ * 显示班级出席
+ * =========================================================
+ */
+
+function renderAttendance(
+  result
+) {
+
+  document
+    .getElementById(
+      "classTitle"
+    )
+    .innerHTML =
+
+    "班级：" +
+
+    escapeHtml(
+      result.classID ||
+      result.className ||
+      ""
+    ) +
+
+    "<br>" +
+
+    "日期：" +
+
+    escapeHtml(
+      result.date ||
+      result.selectedDate ||
+      ""
+    );
+
+
+  /*
+   * =====================================================
+   * 学生资料
+   * =====================================================
+   */
+
+  const students =
+    result.students || [];
+
+
+  currentStudents =
+    students;
+
+
+  /*
+   * =====================================================
+   * 统计
+   * =====================================================
+   */
+
+  let presentCount = 0;
+
+  let lateCount = 0;
+
+  let absentCount = 0;
+
+  let activityCount = 0;
+
+  let unrecordedCount = 0;
+
+
+  /*
+   * =====================================================
+   * RMT
+   * =====================================================
+   */
+
+  let totalRmt = 0;
+
+  let rmtPresent = 0;
+
+
+  students.forEach(
+    student => {
+
+      const status =
+        normalizeDisplayStatus(
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
+        );
+
+
+      const rmt =
+        String(
+          student.RMT || ""
+        )
+          .trim()
+          .toUpperCase();
+
+
+      /*
+       * 全班统计
+       */
+
+      if (
+        status === "Present"
+      ) {
+
+        presentCount++;
+
+      }
+
+      else if (
+        status === "Late"
+      ) {
+
+        lateCount++;
+
+      }
+
+      else if (
+        status === "Absent"
+      ) {
+
+        absentCount++;
+
+      }
+
+      else if (
+        status === "Activity"
+      ) {
+
+        activityCount++;
+
+      }
+
+      else {
+
+        unrecordedCount++;
+
+      }
+
+
+      /*
+       * RMT 总人数
+       */
+
+      if (
+        rmt === "YES" ||
+        rmt === "Y" ||
+        rmt === "是"
+      ) {
+
+        totalRmt++;
+
+
+        /*
+         * RMT 出席：
+         *
+         * 只有「出席」及「迟到」
+         * 才算 RMT 出席。
+         *
+         * 校外活动：
+         * 学校出席，但 RMT 不出席。
+         */
+
+        if (
+          status === "Present" ||
+          status === "Late"
+        ) {
+
+          rmtPresent++;
+
+        }
+
+      }
+
+    }
+  );
+
+
+  /*
+   * =====================================================
+   * 全班总人数
+   * =====================================================
+   */
+
+  const totalStudents =
+    students.length;
+
+
+  /*
+   * =====================================================
+   * 学校出席人数
+   *
+   * 校外活动也算学校出席
+   *
+   * 但是这里「出席」统计只显示真正 Hadir，
+   * 不把 Late / Activity 加进去。
+   * =====================================================
+   */
+
+  const totalPresent =
+    presentCount +
+    lateCount +
+    activityCount;
+
+
+  /*
+   * =====================================================
+   * 班级出席率
+   *
+   * 分母 = 全班人数
+   *
+   * 出席 + 迟到 + 校外活动
+   * 都算学校出席。
+   * =====================================================
+   */
+
+  let attendanceRate = 0;
+
+
+  if (
+    totalStudents > 0
+  ) {
+
+    attendanceRate =
+
+      (
+        totalPresent /
+        totalStudents
+      ) * 100;
+
+  }
+
+
+  /*
+   * =====================================================
+   * 显示统计
+   * =====================================================
+   */
+
+  document
+    .getElementById(
+      "presentCount"
+    )
+    .textContent =
+
+      presentCount;
+
+
+  document
+    .getElementById(
+      "lateCount"
+    )
+    .textContent =
+
+      lateCount;
+
+
+  document
+    .getElementById(
+      "absentCount"
+    )
+    .textContent =
+
+      absentCount;
+
+
+  document
+    .getElementById(
+      "activityCount"
+    )
+    .textContent =
+
+      activityCount;
+
+
+  /*
+   * =====================================================
+   * 班级出席率
+   * =====================================================
+   */
+
+  document
+    .getElementById(
+      "attendanceRate"
+    )
+    .textContent =
+
+      attendanceRate
+        .toFixed(1) +
+
+      "%";
+
+
+  /*
+   * =====================================================
+   * RMT 出席
+   * =====================================================
+   */
+
+  document
+    .getElementById(
+      "rmtPresent"
+    )
+    .textContent =
+
+      rmtPresent +
+
+      " / " +
+
+      totalRmt;
+
+
+  /*
+   * =====================================================
+   * 班级尚未记录
+   * =====================================================
+   */
+
+  document
+    .getElementById(
+      "unrecordedSummary"
+    )
+    .textContent =
+
+      unrecordedCount +
+
+      " / " +
+
+      totalStudents;
+
+
+  /*
+   * =====================================================
+   * 权限
+   * =====================================================
+   */
+
+  showTeacherPermission(
+    result
+  );
+
+
+  /*
+   * =====================================================
+   * 重设筛选
+   * =====================================================
+   */
+
+  currentFilter = "All";
+
+  updateFilterButtons();
+
+
+  /*
+   * =====================================================
+   * 显示学生名单
+   * =====================================================
+   */
+
+  renderStudentList();
+
 }
+
+
+/*
+ * =========================================================
+ * 学生筛选
+ * =========================================================
+ */
+
+function setStudentFilter(
+  filter
+) {
+
+  currentFilter =
+    filter;
+
+  updateFilterButtons();
+
+  renderStudentList();
+
+}
+
+
+function updateFilterButtons() {
+
+  const buttons = {
+
+    All:
+      "filterAll",
+
+    Unrecorded:
+      "filterUnrecorded",
+
+    Present:
+      "filterPresent",
+
+    Late:
+      "filterLate",
+
+    Absent:
+      "filterAbsent",
+
+    Activity:
+      "filterActivity",
+
+    RMT:
+      "filterRmt"
+
+  };
+
+
+  Object
+    .keys(buttons)
+    .forEach(
+      key => {
+
+        const button =
+          document
+            .getElementById(
+              buttons[key]
+            );
+
+
+        if (!button) {
+          return;
+        }
+
+
+        button
+          .classList
+          .remove("active");
+
+
+        if (
+          key === currentFilter
+        ) {
+
+          button
+            .classList
+            .add("active");
+
+        }
+
+      }
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * 全选尚未记录
+ * =========================================================
+ */
+
+function selectAllUnrecorded() {
+
+  if (
+    currentStudents.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentStudents.forEach(
+    student => {
+
+      const status =
+        normalizeDisplayStatus(
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
+        );
+
+
+      if (
+        status === "Unrecorded"
+      ) {
+
+        const studentID =
+          String(
+            student.StudentID || ""
+          )
+            .trim();
+
+
+        if (
+          studentID
+        ) {
+
+          selectedStudentIDs.add(
+            studentID
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+/*
+ * =========================================================
+ * 全选当前显示
+ * =========================================================
+ */
+
+function selectAllVisible() {
+
+  if (
+    currentStudents.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentStudents.forEach(
+    student => {
+
+      const status =
+        normalizeDisplayStatus(
+
+          student.StatusToday ||
+
+          student.AttendanceStatus ||
+
+          student.status ||
+
+          ""
+
+        );
+
+
+      /*
+       * 只选择目前筛选结果中
+       * 可以修改的学生
+       */
+
+      let shouldSelect = true;
+
+
+      if (
+        currentFilter === "Unrecorded"
+      ) {
+
+        shouldSelect =
+          status === "Unrecorded";
+
+      }
+
+      else if (
+        currentFilter === "Present"
+      ) {
+
+        shouldSelect =
+          status === "Present";
+
+      }
+
+      else if (
+        currentFilter === "Late"
+      ) {
+
+        shouldSelect =
+          status === "Late";
+
+      }
+
+      else if (
+        currentFilter === "Absent"
+      ) {
+
+        shouldSelect =
+          status === "Absent";
+
+      }
+
+      else if (
+        currentFilter === "Activity"
+      ) {
+
+        shouldSelect =
+          status === "Activity";
+
+      }
+
+      else if (
+        currentFilter === "RMT"
+      ) {
+
+        const rmt =
+          String(
+            student.RMT || ""
+          )
+            .trim()
+            .toUpperCase();
+
+
+        shouldSelect =
+          rmt === "YES" ||
+          rmt === "Y" ||
+          rmt === "是";
+
+      }
+
+
+      if (
+        shouldSelect &&
+        canEditStudent(student)
+      ) {
+
+        const studentID =
+          String(
+            student.StudentID || ""
+          )
+            .trim();
+
+
+        if (
+          studentID
+        ) {
+
+          selectedStudentIDs.add(
+            studentID
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 清除所有选择
+ * =========================================================
+ */
+
+function clearSelection() {
+
+  selectedStudentIDs.clear();
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+/*
+ * =========================================================
+ * 单个学生选择
+ * =========================================================
+ */
+
+function toggleStudentSelection(
+  studentID
+) {
+
+  const id =
+    String(
+      studentID || ""
+    )
+      .trim();
+
+
+  if (!id) {
+    return;
+  }
+
+
+  if (
+    selectedStudentIDs.has(id)
+  ) {
+
+    selectedStudentIDs.delete(id);
+
+  }
+
+  else {
+
+    selectedStudentIDs.add(id);
+
+  }
+
+
+  updateSelectedInfo();
+
+  renderStudentList();
+
+}
+
+
+/*
+ * =========================================================
+ * 已选择人数
+ * =========================================================
+ */
+
+function updateSelectedInfo() {
+
+  const box =
+    document
+      .getElementById(
+        "selectedInfo"
+      );
+
+
+  if (!box) {
+    return;
+  }
+
+
+  const count =
+    selectedStudentIDs.size;
+
+
+  box.innerHTML =
+
+    "已选择 " +
+
+    count +
+
+    " 人" +
+
+    "<br>" +
+
+    count +
+
+    " murid dipilih";
+
+}
+
+
+/*
+ * =========================================================
+ * 学生名单显示
+ * =========================================================
+ */
+
+function renderStudentList() {
+
+  const list =
+    document
+      .getElementById(
+        "studentList"
+      );
+
+
+  if (!list) {
+    return;
+  }
+
+
+  list.innerHTML = "";
+
+
+  if (
+    currentStudents.length === 0
+  ) {
+
+    list.innerHTML =
+
+      `<div class="message message-waiting">
+
+        没有学生资料
+
+        <br>
+
+        Tiada maklumat murid
+
+      </div>`;
+
+    return;
+
+  }
+
+
+  /*
+   * =====================================================
+   * 先按：
+   *
+   * 1. 尚未记录
+   * 2. 其他状态
+   * =====================================================
+   */
+
+  let studentsToShow =
+
+    [...currentStudents];
+
+
+  studentsToShow.sort(
+    (a, b) => {
+
+      const statusA =
+        normalizeDisplayStatus(
+
+          a.StatusToday ||
+
+          a.AttendanceStatus ||
+
+          a.status ||
+
+          ""
+
+        );
+
+
+      const statusB =
+        normalizeDisplayStatus(
+
+          b.StatusToday ||
+
+          b.AttendanceStatus ||
+
+          b.status ||
+
+          ""
+
+        );
+
+
+      if (
+        statusA === "Unrecorded" &&
+        statusB !== "Unrecorded"
+      ) {
+
+        return -1;
+
+      }
+
+
+      if (
+        statusA !== "Unrecorded" &&
+        statusB === "Unrecorded"
+      ) {
+
+        return 1;
+
+      }
+
+
+      return 0;
+
+    }
+  );
+
+
+  /*
+   * =====================================================
+   * 应用筛选
+   * =====================================================
+   */
+
+  studentsToShow =
+    studentsToShow.filter(
+      student => {
+
+        const status =
+          normalizeDisplayStatus(
+
+            student.StatusToday ||
+
+            student.AttendanceStatus ||
+
+            student.status ||
+
+            ""
+
+          );
+
+
+        if (
+          currentFilter === "All"
+        ) {
+
+          return true;
+
+        }
+
+
+        if (
+          currentFilter === "RMT"
+        ) {
+
+          const rmt =
+            String(
+              student.RMT || ""
+            )
+              .trim()
+              .toUpperCase();
+
+
+          return (
+
+            rmt === "YES" ||
+            rmt === "Y" ||
+            rmt === "是"
+
+          );
+
+        }
+
+
+        return (
+          status === currentFilter
+        );
+
+      }
+    );
+
+
+  if (
+    studentsToShow.length === 0
+  ) {
+
+    list.innerHTML =
+
+      `<div class="message message-waiting">
+
+        没有符合条件的学生
+
+        <br>
+
+        Tiada murid yang sepadan
+
+      </div>`;
+
+    return;
+
+  }
+
+
+  studentsToShow.forEach(
+    (student, index) => {
+
+      list.appendChild(
+
+        createStudentCard(
+          student,
+          index + 1
+        )
+
+      );
+
+    }
+  );
+
+}
+
+
+/*
+ * =========================================================
+ * 权限显示
+ * =========================================================
+ */
+
+function showTeacherPermission(
+  result
+) {
+
+  const box =
+    document
+      .getElementById(
+        "permissionMessage"
+      );
+
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  const today =
+    getTodayString();
+
+
+  const role =
+    String(
+      currentTeacher.Role || ""
+    )
+      .toUpperCase();
+
+
+  const teacherClass =
+    String(
+      currentTeacher.ClassID || ""
+    )
+      .toUpperCase();
+
+
+  const selectedClass =
+    String(
+      document
+        .getElementById(
+          "classSelect"
+        )
+        .value || ""
+    )
+      .toUpperCase();
+
+
+  const isAdmin =
+    role === "ADMIN";
+
+
+  const isHomeroom =
+    teacherClass !== "" &&
+    teacherClass === selectedClass;
+
+
+  if (
+    isAdmin
+  ) {
+
+    box.className =
+      "message message-success";
+
+    box.innerHTML =
+
+      "👑 管理员：可以修改任何班级的出席记录" +
+
+      "<br>" +
+
+      "Pentadbir: Boleh mengubah rekod kehadiran mana-mana kelas.";
+
+  }
+
+  else if (
+    isHomeroom
+  ) {
+
+    box.className =
+      "message message-success";
+
+    box.innerHTML =
+
+      "👩‍🏫 班主任：可以修改本班今天及以前的记录" +
+
+      "<br>" +
+
+      "Guru kelas: Boleh mengubah rekod kelas sendiri hari ini dan tarikh sebelumnya.";
+
+  }
+
+  else if (
+    selectedDate === today
+  ) {
+
+    box.className =
+      "message message-success";
+
+    box.innerHTML =
+
+      "✅ 可以登记今天的出席记录" +
+
+      "<br>" +
+
+      "Boleh merekod kehadiran hari ini.";
+
+  }
+
+  else {
+
+    box.className =
+      "message message-waiting";
+
+    box.innerHTML =
+
+      "🔒 普通教师不能修改以前的记录" +
+
+      "<br>" +
+
+      "Guru biasa tidak boleh mengubah rekod sebelumnya.";
+
+  }
+
+}
+
+
+/*
+ * =========================================================
+ * 学生卡片
+ * =========================================================
+ */
+
+function createStudentCard(
+  student,
+  index
+) {
+
+  const card =
+    document.createElement(
+      "div"
+    );
+
+
+  card.className =
+    "student-card";
+
+
+  const nameC =
+    student.FullNameC ||
+    student.FullName ||
+    "学生";
+
+
+  const name =
+    student.FullName ||
+    "";
+
+
+  const studentID =
+    student.StudentID ||
+    "";
+
+
+  const rmt =
+    String(
+      student.RMT || ""
+    )
+      .trim()
+      .toUpperCase();
+
+
+  const isRmt =
+
+    rmt === "YES" ||
+    rmt === "Y" ||
+    rmt === "是";
+
+
+  let status =
+    student.StatusToday ||
+    student.AttendanceStatus ||
+    student.status ||
+    "";
+
+
+  status =
+    normalizeDisplayStatus(
+      status
+    );
+
+
+  const canEdit =
+    canEditStudent(
+      student
+    );
+
+
+  const isSelected =
+    selectedStudentIDs.has(
+      String(
+        studentID
+      )
+        .trim()
+    );
+
+
+  if (
+    isSelected
+  ) {
+
+    card.classList.add(
+      "selected"
+    );
+
+  }
+
+
+  let rmtBadge = "";
+
+
+  if (
+    isRmt
+  ) {
+
+    rmtBadge =
+
+      `<span class="rmt-badge">
+        🍱 RMT
+      </span>`;
+
+  }
+
+
+  card.innerHTML =
+
+    `<div class="student-select-row">` +
+
+
+      (
+        canEdit
+
+        ?
+
+        `<input
+          type="checkbox"
+          class="student-checkbox"
+          ${isSelected ? "checked" : ""}
+          onchange="toggleStudentSelection('${escapeJs(studentID)}')"
+        >`
+
+        :
+
+        ``
+      ) +
+
+
+      `<div class="student-content">
+
+        <div class="student-name">
+
+          ${index}.
+          ${escapeHtml(nameC)}
+
+          ${rmtBadge}
+
+        </div>
+
+        <div class="student-name-en">
+
+          ${escapeHtml(name)}
+
+        </div>
+
+        <div class="student-detail">
+
+          ID：${escapeHtml(studentID)}
+
+        </div>
+
+      </div>
+
+    </div>` +
+
+
+    `<div class="status ${getStatusClass(status)}">
+
+      ${getStatusText(status)}
+
+    </div>`;
+
+
+  /*
+   * =====================================================
+   * 单人修改按钮
+   * =====================================================
+   */
+
+  if (
+    canEdit
+  ) {
+
+    const actions =
+      document.createElement(
+        "div"
+      );
+
+
+    actions.className =
+      "student-actions";
+
+
+    actions.innerHTML =
+
+      `<button
+        class="present-button"
+        onclick="setAttendance(
+          '${escapeJs(studentID)}',
+          '出席 Hadir'
+        )"
+      >
+        🟢 出席
+        <br>
+        Hadir
+      </button>` +
+
+
+      `<button
+        class="late-button"
+        onclick="setAttendance(
+          '${escapeJs(studentID)}',
+          '迟到 Lewat'
+        )"
+      >
+        🟡 迟到
+        <br>
+        Lewat
+      </button>` +
+
+
+      `<button
+        class="absent-button"
+        onclick="setAttendance(
+          '${escapeJs(studentID)}',
+          '缺席 Tidak Hadir'
+        )"
+      >
+        🔴 缺席
+        <br>
+        Tidak Hadir
+      </button>` +
+
+
+      `<button
+        class="activity-button"
+        onclick="setAttendance(
+          '${escapeJs(studentID)}',
+          '校外活动 Aktiviti Luar Sekolah'
+        )"
+      >
+        🔵 校外活动
+        <br>
+        Aktiviti Luar Sekolah
+      </button>`;
+
+
+    card.appendChild(
+      actions
+    );
+
+  }
+
+
+  return card;
+
+}
+
+
+/*
+ * =========================================================
+ * 判断是否可以修改
+ * =========================================================
+ */
+
+function canEditStudent(
+  student
+) {
+
+  if (
+    !currentTeacher
+  ) {
+
+    return false;
+
+  }
+
+
+  const role =
+    String(
+      currentTeacher.Role || ""
+    )
+      .toUpperCase();
+
+
+  if (
+    role === "ADMIN"
+  ) {
+
+    return true;
+
+  }
+
+
+  const today =
+    getTodayString();
+
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  const teacherClass =
+    String(
+      currentTeacher.ClassID || ""
+    )
+      .toUpperCase();
+
+
+  const studentClass =
+    String(
+      student.Class || ""
+    )
+      .toUpperCase();
+
+
+  const isHomeroom =
+    teacherClass !== "" &&
+    teacherClass === studentClass;
+
+
+  if (
+    isHomeroom
+  ) {
+
+    return true;
+
+  }
+
+
+  return selectedDate === today;
+
+}
+
+
+/*
+ * =========================================================
+ * 手动登记
+ * =========================================================
+ */
+
+async function setAttendance(
+  studentID,
+  status
+) {
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  if (
+    !currentTeacher
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const url =
+
+      API_URL +
+
+      "?action=manualAttendance" +
+
+      "&teacherID=" +
+
+      encodeURIComponent(
+        currentTeacher.TeacherID
+      ) +
+
+      "&studentID=" +
+
+      encodeURIComponent(
+        studentID
+      ) +
+
+      "&status=" +
+
+      encodeURIComponent(
+        status
+      ) +
+
+      "&remark=" +
+
+      encodeURIComponent(
+        ""
+      ) +
+
+      "&selectedDate=" +
+
+      encodeURIComponent(
+        selectedDate
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+
+      throw new Error(
+        result.message ||
+        "登记失败"
+      );
+
+    }
+
+
+    selectedStudentIDs.delete(
+      String(
+        studentID
+      )
+        .trim()
+    );
+
+
+    await loadClassAttendance();
+
+
+  }
+
+  catch (error) {
+
+    alert(
+
+      "❌ 登记失败\n" +
+
+      "Gagal merekod\n\n" +
+
+      (
+
+        error.message ||
+
+        String(error)
+
+      )
+
+    );
+
+  }
+
+}
+/*
+ * =========================================================
+ * 批量登记 / 修改出席
+ * =========================================================
+ */
+
+async function batchSetAttendance(
+  status
+) {
+
+  /*
+   * 没有选择学生
+   */
+
+  if (
+    selectedStudentIDs.size === 0
+  ) {
+
+    alert(
+
+      "⚠️ 请先选择学生\n" +
+      "Sila pilih murid dahulu."
+
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !currentTeacher
+  ) {
+
+    return;
+
+  }
+
+
+  const selectedDate =
+    document
+      .getElementById(
+        "attendanceDate"
+      )
+      .value;
+
+
+  /*
+   * 检查日期
+   */
+
+  if (
+    !selectedDate
+  ) {
+
+    alert(
+
+      "⚠️ 请选择日期\n" +
+      "Sila pilih tarikh."
+
+    );
+
+    return;
+
+  }
+
+
+  const studentIDs =
+    Array.from(
+      selectedStudentIDs
+    );
+
+
+  /*
+   * 确认
+   */
+
+  const confirmText =
+
+    "确定要将 " +
+
+    studentIDs.length +
+
+    " 名学生登记为：\n\n" +
+
+    status +
+
+    "？\n\n" +
+
+    "Adakah anda pasti mahu merekod " +
+
+    studentIDs.length +
+
+    " murid sebagai:\n\n" +
+
+    status +
+
+    "?";
+
+
+  if (
+    !confirm(confirmText)
+  ) {
+
+    return;
+
+  }
+
+
+  const messageBox =
+    document
+      .getElementById(
+        "batchMessage"
+      );
+
+
+  messageBox.innerHTML =
+
+    `<div class="message message-waiting">
+
+      ⏳ 正在批量登记...
+
+      <br>
+
+      Sedang merekod secara berkumpulan...
+
+      <br>
+
+      ${studentIDs.length} 名学生
+
+    </div>`;
+
+
+  /*
+   * 暂时锁住批量按钮
+   */
+
+  const buttons =
+    document.querySelectorAll(
+      "#batchActions button"
+    );
+
+
+  buttons.forEach(
+    button => {
+
+      button.disabled = true;
+
+    }
+  );
+
+
+  try {
+
+    const url =
+
+      API_URL +
+
+      "?action=batchManualAttendance" +
+
+      "&teacherID=" +
+
+      encodeURIComponent(
+        currentTeacher.TeacherID
+      ) +
+
+      "&studentIDs=" +
+
+      encodeURIComponent(
+        JSON.stringify(
+          studentIDs
+        )
+      ) +
+
+      "&status=" +
+
+      encodeURIComponent(
+        status
+      ) +
+
+      "&remark=" +
+
+      encodeURIComponent(
+        ""
+      ) +
+
+      "&selectedDate=" +
+
+      encodeURIComponent(
+        selectedDate
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    console.log(
+      "批量登记结果：",
+      result
+    );
+
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+
+      throw new Error(
+
+        result.message ||
+
+        "批量登记失败"
+
+      );
+
+    }
+
+
+    /*
+     * 成功
+     */
+
+    selectedStudentIDs.clear();
+
+    updateSelectedInfo();
+
+
+    messageBox.innerHTML =
+
+      `<div class="message message-success">
+
+        ✅ 批量登记成功
+
+        <br>
+
+        Rekod berkumpulan berjaya
+
+        <br><br>
+
+        ${result.successCount || 0}
+        名学生已登记
+
+        <br>
+
+        ${result.successCount || 0}
+        murid telah direkodkan
+
+      </div>`;
+
+
+    /*
+     * 重新读取班级资料
+     *
+     * 这样统计数字、
+     * 学生状态、
+     * RMT
+     * 都会马上更新
+     */
+
+    await loadClassAttendance();
+
+
+  }
+
+  catch (error) {
+
+    messageBox.innerHTML =
+
+      `<div class="message message-error">
+
+        ❌ 批量登记失败
+
+        <br>
+
+        Gagal merekod secara berkumpulan
+
+        <br><br>
+
+        <span class="small-text">
+
+          ${escapeHtml(
+            error.message ||
+            String(error)
+          )}
+
+        </span>
+
+      </div>`;
+
+  }
+
+
+  finally {
+
+    buttons.forEach(
+      button => {
+
+        button.disabled = false;
+
+      }
+    );
+
+  }
+
+}
+
+/*
+ * =========================================================
+ * STATUS
+ * =========================================================
+ */
+
+function normalizeDisplayStatus(
+  status
+) {
+
+  const value =
+    String(
+      status || ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  if (
+    !value
+  ) {
+
+    return "Unrecorded";
+
+  }
+
+
+  if (
+    value.includes("迟到") ||
+    value === "late" ||
+    value === "lewat"
+  ) {
+
+    return "Late";
+
+  }
+
+
+  if (
+    value.includes("缺席") ||
+    value === "absent" ||
+    value === "tidak hadir"
+  ) {
+
+    return "Absent";
+
+  }
+
+
+  if (
+    value.includes("校外活动") ||
+    value.includes("aktiviti luar")
+  ) {
+
+    return "Activity";
+
+  }
+
+
+  if (
+    value.includes("出席") ||
+    value === "present" ||
+    value === "hadir"
+  ) {
+
+    return "Present";
+
+  }
+
+
+  return "Unrecorded";
+
+}
+
+
+function getStatusClass(
+  status
+) {
+
+  if (
+    status === "Present"
+  ) {
+
+    return "status-present";
+
+  }
+
+
+  if (
+    status === "Late"
+  ) {
+
+    return "status-late";
+
+  }
+
+
+  if (
+    status === "Absent"
+  ) {
+
+    return "status-absent";
+
+  }
+
+
+  if (
+    status === "Activity"
+  ) {
+
+    return "status-activity";
+
+  }
+
+
+  return "status-unrecorded";
+
+}
+
+
+function getStatusText(
+  status
+) {
+
+  if (
+    status === "Present"
+  ) {
+
+    return "🟢 出席 Hadir";
+
+  }
+
+
+  if (
+    status === "Late"
+  ) {
+
+    return "🟡 迟到 Lewat";
+
+  }
+
+
+  if (
+    status === "Absent"
+  ) {
+
+    return "🔴 缺席 Tidak Hadir";
+
+  }
+
+
+  if (
+    status === "Activity"
+  ) {
+
+    return "🔵 校外活动 Aktiviti Luar Sekolah";
+
+  }
+
+
+  return "⚪ 尚未记录 Belum Direkodkan";
+
+}
+
+
+/*
+ * =========================================================
+ * 工作人员 QR SCANNER
+ * =========================================================
+ */
+
+async function loadStudents() {
+
+  try {
+
+    showScanResult(
+
+      "⏳ 正在加载学生资料..." +
+
+      "<br>" +
+
+      "Memuatkan maklumat murid...",
+
+      "scan-waiting"
+
+    );
+
+
+    const response =
+      await fetch(
+
+        API_URL +
+        "?action=students",
+
+        {
+          cache: "no-store"
+        }
+
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (
+      !result ||
+      result.success !== true ||
+      !Array.isArray(
+        result.students
+      )
+    ) {
+
+      throw new Error(
+        "无法取得学生资料"
+      );
+
+    }
+
+
+    studentCache = {};
+
+
+    result.students.forEach(
+      student => {
+
+        if (
+          student.Barcode
+        ) {
+
+          studentCache[
+            normalizeCode(
+              student.Barcode
+            )
+          ] =
+            student;
+
+        }
+
+
+        if (
+          student.StudentID
+        ) {
+
+          studentCache[
+            normalizeCode(
+              student.StudentID
+            )
+          ] =
+            student;
+
+        }
+
+      }
+    );
+
+
+    showScanResult(
+
+      "✅ 学生资料已就绪" +
+
+      "<br>" +
+
+      "Sedia untuk diimbas" +
+
+      "<br>" +
+
+      `<span class="small-text">
+
+        ${result.students.length} 名学生
+
+      </span>`,
+
+      "scan-success"
+
+    );
+
+
+  }
+
+  catch (error) {
+
+    showScanResult(
+
+      "⚠️ 学生资料加载失败" +
+
+      "<br>" +
+
+      "Gagal memuatkan maklumat murid",
+
+      "scan-error"
+
+    );
+
+  }
+
+}
+
+
+function normalizeCode(
+  value
+) {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+
+    return "";
+
+  }
+
+
+  return String(value)
+
+    .trim()
+
+    .replace(
+      /\s+/g,
+      ""
+    )
+
+    .toUpperCase();
+
+}
+
+
+function getStudentFromCache(
+  code
+) {
+
+  return (
+
+    studentCache[
+      normalizeCode(code)
+    ] ||
+
+    null
+
+  );
+
+}
+
+
+function showScanResult(
+  message,
+  type
+) {
+
+  const box =
+    document
+      .getElementById(
+        "scanResult"
+      );
+
+
+  if (!box) {
+
+    return;
+
+  }
+
+
+  box.className =
+    type;
+
+
+  box.innerHTML =
+    message;
+
+}
+
+
+function getCurrentAttendanceInfo() {
+
+  const now =
+    new Date();
+
+
+  const totalMinutes =
+    now.getHours() * 60 +
+    now.getMinutes();
+
+
+  const status =
+    totalMinutes >=
+    (6 * 60 + 46)
+      ? "Late"
+      : "Present";
+
+
+  const time =
+
+    String(
+      now.getHours()
+    ).padStart(2, "0") +
+
+    ":" +
+
+    String(
+      now.getMinutes()
+    ).padStart(2, "0") +
+
+    ":" +
+
+    String(
+      now.getSeconds()
+    ).padStart(2, "0");
+
+
+  return {
+
+    status: status,
+
+    time: time
+
+  };
+
+}
+
+
+async function handleQR(
+  qrCode
+) {
+
+  if (
+    isProcessing
+  ) {
+
+    return;
+
+  }
+
+
+  const cleanCode =
+    normalizeCode(
+      qrCode
+    );
+
+
+  if (
+    !cleanCode
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    cleanCode === lastCode
+  ) {
+
+    return;
+
+  }
+
+
+  isProcessing =
+    true;
+
+
+  lastCode =
+    cleanCode;
+
+
+  let student =
+    getStudentFromCache(
+      cleanCode
+    );
+
+
+  try {
+
+    if (!student) {
+
+      const response =
+        await fetch(
+
+          API_URL +
+          "?action=student&barcode=" +
+          encodeURIComponent(
+            cleanCode
+          ),
+
+          {
+            cache: "no-store"
+          }
+
+        );
+
+
+      const result =
+        await response.json();
+
+
+      if (
+        !result.success ||
+        !result.student
+      ) {
+
+        throw new Error(
+          "找不到学生资料 / Murid tidak dijumpai"
+        );
+
+      }
+
+
+      student =
+        result.student;
+
+    }
+
+
+    const studentKey =
+      normalizeCode(
+        student.StudentID ||
+        cleanCode
+      );
+
+
+    if (
+      localCheckedSet.has(
+        studentKey
+      )
+    ) {
+
+      showScanResult(
+
+        `<div class="student-name-c">
+
+          ${escapeHtml(
+            student.FullNameC ||
+            student.FullName ||
+            ""
+          )}
+
+        </div>` +
+
+        `<div>
+
+          ⚠️ 今日已打卡
+
+          <br>
+
+          Sudah hadir hari ini
+
+        </div>`,
+
+        "scan-error"
+
+      );
+
+
+      resetScannerLock(
+        1500
+      );
+
+
+      return;
+
+    }
+
+
+    const attendanceInfo =
+      getCurrentAttendanceInfo();
+
+
+    localCheckedSet.add(
+      studentKey
+    );
+
+
+    attendanceStatusMap[
+      studentKey
+    ] = attendanceInfo;
+
+
+    if (
+      attendanceInfo.status ===
+      "Late"
+    ) {
+
+      showScanResult(
+
+        `<div class="student-name-c">
+
+          ${escapeHtml(
+            student.FullNameC ||
+            student.FullName ||
+            ""
+          )}
+
+        </div>` +
+
+        `<div>
+
+          🟡 迟到 Lewat
+
+        </div>` +
+
+        `<div class="small-text">
+
+          ${attendanceInfo.time}
+
+        </div>`,
+
+        "scan-late"
+
+      );
+
+    }
+
+    else {
+
+      showScanResult(
+
+        `<div class="student-name-c">
+
+          ${escapeHtml(
+            student.FullNameC ||
+            student.FullName ||
+            ""
+          )}
+
+        </div>` +
+
+        `<div>
+
+          🟢 准时出席 Hadir
+
+        </div>` +
+
+        `<div class="small-text">
+
+          ${attendanceInfo.time}
+
+        </div>`,
+
+        "scan-success"
+
+      );
+
+    }
+
+
+    sendAttendance(
+      student,
+      attendanceInfo
+    );
+
+
+  }
+
+  catch (error) {
+
+    showScanResult(
+
+      "❌ 找不到学生资料" +
+
+      "<br>" +
+
+      "Murid tidak dijumpai" +
+
+      "<br>" +
+
+      `<span class="small-text">
+
+        ${escapeHtml(
+          error.message ||
+          String(error)
+        )}
+
+      </span>`,
+
+      "scan-error"
+
+    );
+
+  }
+
+
+  resetScannerLock(
+    1500
+  );
+
+}
+
+
+function sendAttendance(
+  student,
+  attendanceInfo
+) {
+
+  const studentID =
+    student.StudentID || "";
+
+
+  const studentClass =
+    student.Class || "";
+
+
+  const url =
+
+    API_URL +
+
+    "?action=attendance" +
+
+    "&studentID=" +
+
+    encodeURIComponent(
+      studentID
+    ) +
+
+    "&class=" +
+
+    encodeURIComponent(
+      studentClass
+    ) +
+
+    "&method=QR";
+
+
+  fetch(
+    url,
+    {
+      cache: "no-store"
+    }
+  )
+
+    .then(
+      response =>
+        response.json()
+    )
+
+    .then(
+      result => {
+
+        console.log(
+          "打卡结果：",
+          result
+        );
+
+      }
+    )
+
+    .catch(
+      error => {
+
+        console.error(
+          "打卡失败：",
+          error
+        );
+
+      }
+    );
+
+}
+
+
+function resetScannerLock(
+  delay
+) {
+
+  setTimeout(
+    () => {
+
+      showScanResult(
+
+        "📷 等待下一位学生..." +
+
+        "<br>" +
+
+        "Menunggu murid seterusnya...",
+
+        "scan-waiting"
+
+      );
+
+
+      isProcessing =
+        false;
+
+
+      lastCode =
+        "";
+
+    },
+
+    delay
+
+  );
+
+}
+
+
+/*
+ * =========================================================
+ * CAMERA
+ * =========================================================
+ */
+
+function findCamera(
+  type
+) {
+
+  if (
+    type === "back"
+  ) {
+
+    return cameras.find(
+      camera => {
+
+        const label =
+          (
+            camera.label ||
+            ""
+          )
+            .toLowerCase();
+
+
+        return (
+
+          label.includes("back") ||
+          label.includes("rear") ||
+          label.includes("environment") ||
+          label.includes("后置")
+
+        );
+
+      }
+    );
+
+  }
+
+
+  return cameras.find(
+    camera => {
+
+      const label =
+        (
+          camera.label ||
+          ""
+        )
+          .toLowerCase();
+
+
+      return (
+
+        label.includes("front") ||
+        label.includes("user") ||
+        label.includes("前置")
+
+      );
+
+    }
+  );
+
+}
+
+
+function updateCameraButtons(
+  type
+) {
+
+  document
+    .getElementById(
+      "backButton"
+    )
+    .classList
+    .remove("active");
+
+
+  document
+    .getElementById(
+      "frontButton"
+    )
+    .classList
+    .remove("active");
+
+
+  if (
+    type === "back"
+  ) {
+
+    document
+      .getElementById(
+        "backButton"
+      )
+      .classList
+      .add("active");
+
+  }
+
+
+  if (
+    type === "front"
+  ) {
+
+    document
+      .getElementById(
+        "frontButton"
+      )
+      .classList
+      .add("active");
+
+  }
+
+}
+
+
+function startCamera(
+  camera,
+  type
+) {
+
+  if (
+    !camera
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    !scanner
+  ) {
+
+    scanner =
+      new Html5Qrcode(
+        "reader"
+      );
+
+  }
+
+
+  scanner
+    .start(
+
+      camera.id,
+
+      {
+
+        fps: 20,
+
+        qrbox: {
+
+          width: 220,
+
+          height: 220
+
+        },
+
+        rememberLastUsedCamera:
+          true
+
+      },
+
+      decodedText => {
+
+        handleQR(
+          decodedText
+        );
+
+      },
+
+      () => {}
+
+    )
+
+    .then(
+      () => {
+
+        currentCamera =
+          type;
+
+        updateCameraButtons(
+          type
+        );
+
+      }
+    )
+
+    .catch(
+      error => {
+
+        showScanResult(
+
+          "❌ 无法开启相机" +
+
+          "<br>" +
+
+          "Tidak dapat membuka kamera" +
+
+          "<br>" +
+
+          `<span class="small-text">
+
+            ${escapeHtml(
+              error.message ||
+              String(error)
+            )}
+
+          </span>`,
+
+          "scan-error"
+
+        );
+
+      }
+    );
+
+}
+
+
+function changeCamera(
+  type
+) {
+
+  if (
+    isSwitching ||
+    currentCamera === type
+  ) {
+
+    return;
+
+  }
+
+
+  const camera =
+    findCamera(type);
+
+
+  if (
+    !camera
+  ) {
+
+    showScanResult(
+
+      "⚠️ 找不到相机" +
+
+      "<br>" +
+
+      "Kamera tidak dijumpai",
+
+      "scan-error"
+
+    );
+
+    return;
+
+  }
+
+
+  isSwitching =
+    true;
+
+
+  if (
+    scanner &&
+    scanner.isScanning
+  ) {
+
+    scanner
+      .stop()
+
+      .then(
+        () => {
+
+          try {
+
+            scanner.clear();
+
+          }
+
+          catch (e) {}
+
+
+          scanner =
+            new Html5Qrcode(
+              "reader"
+            );
+
+
+          startCamera(
+            camera,
+            type
+          );
+
+
+          isSwitching =
+            false;
+
+        }
+      )
+
+      .catch(
+        () => {
+
+          isSwitching =
+            false;
+
+        }
+      );
+
+  }
+
+  else {
+
+    scanner =
+      new Html5Qrcode(
+        "reader"
+      );
+
+
+    startCamera(
+      camera,
+      type
+    );
+
+
+    isSwitching =
+      false;
+
+  }
+
+}
+
+
+function startScanner() {
+
+  stopScanner();
+
+
+  scanner =
+    new Html5Qrcode(
+      "reader"
+    );
+
+
+  Html5Qrcode
+    .getCameras()
+
+    .then(
+      cameraList => {
+
+        cameras =
+          cameraList || [];
+
+
+        if (
+          cameras.length === 0
+        ) {
+
+          showScanResult(
+
+            "❌ 找不到相机" +
+
+            "<br>" +
+
+            "Tiada kamera dijumpai",
+
+            "scan-error"
+
+          );
+
+          return;
+
+        }
+
+
+        const backCamera =
+          findCamera("back");
+
+
+        if (
+          backCamera
+        ) {
+
+          startCamera(
+            backCamera,
+            "back"
+          );
+
+        }
+
+        else {
+
+          startCamera(
+            cameras[0],
+            "front"
+          );
+
+        }
+
+      }
+    )
+
+    .catch(
+      error => {
+
+        showScanResult(
+
+          "❌ 无法获取相机权限" +
+
+          "<br>" +
+
+          "Tiada kebenaran kamera" +
+
+          "<br>" +
+
+          `<span class="small-text">
+
+            ${escapeHtml(
+              error.message ||
+              String(error)
+            )}
+
+          </span>`,
+
+          "scan-error"
+
+        );
+
+      }
+    );
+
+}
+
+
+function stopScanner() {
+
+  if (
+    scanner &&
+    scanner.isScanning
+  ) {
+
+    scanner
+      .stop()
+      .catch(
+        () => {}
+      );
+
+  }
+
+
+  scanner =
+    null;
+
+  currentCamera =
+    null;
+
+  cameras =
+    [];
+
+}
+
+
+/*
+ * =========================================================
+ * 工具
+ * =========================================================
+ */
+
+function getTodayString() {
+
+  const now =
+    new Date();
+
+
+  return (
+
+    now.getFullYear() +
+
+    "-" +
+
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0") +
+
+    "-" +
+
+    String(
+      now.getDate()
+    ).padStart(2, "0")
+
+  );
+
+}
+
+
+function showTeacherMessage(
+  message
+) {
+
+  const box =
+    document
+      .getElementById(
+        "permissionMessage"
+      );
+
+
+  box.className =
+    "message message-error";
+
+
+  box.innerHTML =
+    message;
+
+}
+
+
+function escapeHtml(
+  value
+) {
+
+  return String(value)
+
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+
+    .replace(
+      /</g,
+      "&lt;"
+    )
+
+    .replace(
+      />/g,
+      "&gt;"
+    )
+
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+
+}
+
+
+function escapeJs(
+  value
+) {
+
+  return String(value || "")
+
+    .replace(
+      /\\/g,
+      "\\\\"
+    )
+
+    .replace(
+      /'/g,
+      "\\'"
+    )
+
+    .replace(
+      /\r/g,
+      "\\r"
+    )
+
+    .replace(
+      /\n/g,
+      "\\n"
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
