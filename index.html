@@ -1251,7 +1251,7 @@
   <button class="primary-button" onclick="submitSelectedAttendance()">确认批量提交 / Hantar Rekod</button>
 </div>
 <div class="compact-selection-actions">
-  <button class="secondary-button" onclick="clearSelection()">取消全选 / Nyahpilih Semua</button>
+  <button class="secondary-button" onclick="clearSelection()">取消全选 Batal Semua</button>
 </div>
 
 <div
@@ -3204,15 +3204,9 @@ function createStudentCard(
     "student-card";
 
 
-  const nameC =
-    student.FullNameC ||
-    student.FullName ||
-    "学生";
-
-
-  const name =
-    student.FullName ||
-    "";
+  const nameC = String(student.FullNameC || "").trim();
+  const name = String(student.FullName || "").trim();
+  const displayNames = [nameC, name].filter(Boolean).join(" ") || "学生";
 
 
   const studentID =
@@ -3318,7 +3312,7 @@ function createStudentCard(
         <div class="student-name">
 
           ${index}.
-          ${escapeHtml(nameC)}
+          ${escapeHtml(displayNames)}
 
           ${rmtBadge}
 
