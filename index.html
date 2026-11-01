@@ -14,7 +14,72 @@
 
   <title>School Attendance</title>
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/html5-qrcode">
+/* V4 管理员 Dashboard；不会影响教师点名及扫码 */
+function adminRoleV4(){return String((currentTeacher&&currentTeacher.Role)||"").toUpperCase().replace(/[ _-]/g,"");}
+function setupAdminEntryV4(){
+  const role=adminRoleV4();
+  document.getElementById("adminEntryV4").classList.toggle("hidden",role!=="ADMIN"&&role!=="RMTADMIN");
+}
+function openDailyDashboardV4(){
+  if(!currentTeacher || !["ADMIN","RMTADMIN"].includes(adminRoleV4()))return;
+  hideAllPages();
+  document.getElementById("adminDashboardPage").classList.remove("hidden");
+  document.getElementById("dashboardDate").value=document.getElementById("attendanceDate").value||getTodayString();
+  loadDailyDashboardV4();
+}
+function returnToTeacherV4(){hideAllPages();document.getElementById("teacherPage").classList.remove("hidden");}
+function dashNumberV4(x){return Number(x||0).toLocaleString();}
+function dashPctV4(x){return Number(x||0).toFixed(2)+"%";}
+function dashStatsV4(t,isRmt){
+  const items=[
+    ["总人数 / Jumlah Murid",t.total],
+    ["出席 / Hadir",t.present],
+    ["迟到 / Lewat",t.late],
+    ["缺席 / Tidak Hadir",t.absent],
+    ["尚未点名 / Belum Direkodkan",t.unrecorded]
+  ];
+  if(!isRmt)items.splice(4,0,["校外活动 / Aktiviti Luar Sekolah",t.activity]);
+  return '<div class="summary">'+items.map(([label,value])=>'<div class="summary-box">'+escapeHtml(label)+'<div class="summary-number">'+dashNumberV4(value)+'</div></div>').join('')+'</div>'+
+    '<div class="date-box"><strong>'+(isRmt?'RMT 出席 / Kehadiran RMT':'每日出席百分比 / Peratus Kehadiran Harian')+': '+dashPctV4(t.percentage)+'</strong></div>';
+}
+function dashTableV4(heads,rows){
+  return '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>'+heads.map(h=>'<th style="padding:9px 6px;text-align:left;border-bottom:2px solid #ddd">'+escapeHtml(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(c=>'<td style="padding:9px 6px;border-bottom:1px solid #eee">'+escapeHtml(String(c))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+}
+function dashStudentTableV4(students){
+  if(!students.length)return '<p>没有学生 / Tiada murid.</p>';
+  return dashTableV4(["班级 / Kelas","学生姓名 / Nama Murid"],students.map(s=>[s.classID,[s.FullNameC,s.FullName].filter(Boolean).join(' / ')]));
+}
+async function loadDailyDashboardV4(){
+  const msg=document.getElementById("dashboardMessage");
+  const date=document.getElementById("dashboardDate").value;
+  if(!date||!currentTeacher)return;
+  msg.textContent="正在加载 / Sedang memuatkan...";
+  try{
+    const url=API_URL+'?action=dailyDashboard&teacherID='+encodeURIComponent(currentTeacher.TeacherID)+'&selectedDate='+encodeURIComponent(date);
+    const response=await fetch(url,{cache:"no-store"});
+    const data=await response.json();
+    if(!data.success)throw new Error(data.message||"Gagal memuatkan laporan");
+    const schoolVisible=!!data.school;
+    document.getElementById("schoolDashboardV4").classList.toggle("hidden",!schoolVisible);
+    if(schoolVisible){
+      document.getElementById("schoolTotalsV4").innerHTML=dashStatsV4(data.school,false);
+      document.getElementById("classRowsV4").innerHTML=dashTableV4(
+        ["班级 / Kelas","出席 / Hadir","迟到 / Lewat","缺席 / Tidak Hadir","校外活动 / Aktiviti Luar","未点名 / Belum Direkodkan","百分比 / Peratus"],
+        data.classes.map(c=>[c.classID,c.present,c.late,c.absent,c.activity,c.unrecorded,dashPctV4(c.percentage)]));
+      document.getElementById("incompleteClassesV4").innerHTML=data.incompleteClasses.length?
+        dashTableV4(["班级 / Kelas","已点名 / Direkodkan","未点名 / Belum Direkodkan"],data.incompleteClasses.map(c=>[c.classID,c.total-c.unrecorded,c.unrecorded])):
+        '<p>所有班级已完成点名 / Semua kelas telah selesai merekod kehadiran.</p>';
+    }
+    document.getElementById("rmtTotalsV4").innerHTML=dashStatsV4(data.rmt,true)+
+      '<p style="font-size:13px;color:#6b7280">RMT 校外活动学生计入 RMT 缺席；尚未点名独立统计。 / Murid aktiviti luar dikira tidak hadir RMT; belum direkodkan diasingkan.</p>';
+    document.getElementById("rmtAbsentV4").innerHTML=dashStudentTableV4(data.rmtAbsentStudents);
+    document.getElementById("rmtUnrecordedV4").innerHTML=dashStudentTableV4(data.rmtUnrecordedStudents);
+    msg.textContent="更新完成 / Dikemas kini: "+data.date;
+  }catch(err){msg.textContent="❌ "+err.message+"。请确认 Code.gs 已更新并重新部署 / Sila kemas kini dan deploy Code.gs.";}
+}
+
+</script>
 
   <style>
 
@@ -882,6 +947,28 @@
   </div>
 
 
+
+  <div id="adminDashboardPage" class="hidden">
+    <div class="card">
+      <h2>📊 每日出席百分比<br><small>Peratus Kehadiran Harian</small></h2>
+      <label for="dashboardDate">日期 / Tarikh</label>
+      <input type="date" id="dashboardDate" onchange="loadDailyDashboardV4()">
+      <button class="secondary-button" onclick="loadDailyDashboardV4()">🔄 更新 / Muat Semula</button>
+      <button class="secondary-button" onclick="returnToTeacherV4()">返回教师页面 / Kembali</button>
+      <div id="dashboardMessage"></div>
+    </div>
+    <div id="schoolDashboardV4" class="hidden">
+      <div class="card"><h2>🏫 全校每日出席百分比<br><small>Peratus Kehadiran Harian Sekolah</small></h2><div id="schoolTotalsV4"></div></div>
+      <div class="card"><h2>📋 班级出席百分比<br><small>Peratus Kehadiran Kelas</small></h2><div id="classRowsV4"></div></div>
+      <div class="card"><h2>⚠️ 未完成点名的班级<br><small>Senarai Kelas Belum Selesai Merekod Kehadiran</small></h2><div id="incompleteClassesV4"></div></div>
+    </div>
+    <div class="card"><h2>🍱 RMT 每日管理<br><small>Pengurusan Kehadiran RMT Harian</small></h2>
+      <div id="rmtTotalsV4"></div>
+      <h3>缺席学生名单 / Senarai Murid Tidak Hadir</h3><div id="rmtAbsentV4"></div>
+      <h3>尚未点名 / Belum Direkodkan</h3><div id="rmtUnrecordedV4"></div>
+    </div>
+  </div>
+
   <!-- =====================================================
        TEACHER PAGE
        ===================================================== -->
@@ -890,6 +977,7 @@
     id="teacherPage"
     class="hidden"
   >
+    <div id="adminEntryV4" class="card hidden"><button onclick="openDailyDashboardV4()">📊 每日出席百分比 / Peratus Kehadiran Harian · RMT Admin</button></div>
 
     <div class="card">
 
@@ -1472,6 +1560,7 @@ function hideAllPages() {
     .getElementById("staffPage")
     .classList
     .add("hidden");
+  document.getElementById("adminDashboardPage").classList.add("hidden");
 
 }
 
@@ -1764,6 +1853,7 @@ async function teacherLogin() {
 
 
     await loadClasses();
+    setupAdminEntryV4();
 
 
   }
@@ -4950,6 +5040,71 @@ function escapeJs(
       "\\n"
     );
 
+}
+
+
+/* V4 管理员 Dashboard；不会影响教师点名及扫码 */
+function adminRoleV4(){return String((currentTeacher&&currentTeacher.Role)||"").toUpperCase().replace(/[ _-]/g,"");}
+function setupAdminEntryV4(){
+  const role=adminRoleV4();
+  document.getElementById("adminEntryV4").classList.toggle("hidden",role!=="ADMIN"&&role!=="RMTADMIN");
+}
+function openDailyDashboardV4(){
+  if(!currentTeacher || !["ADMIN","RMTADMIN"].includes(adminRoleV4()))return;
+  hideAllPages();
+  document.getElementById("adminDashboardPage").classList.remove("hidden");
+  document.getElementById("dashboardDate").value=document.getElementById("attendanceDate").value||getTodayString();
+  loadDailyDashboardV4();
+}
+function returnToTeacherV4(){hideAllPages();document.getElementById("teacherPage").classList.remove("hidden");}
+function dashNumberV4(x){return Number(x||0).toLocaleString();}
+function dashPctV4(x){return Number(x||0).toFixed(2)+"%";}
+function dashStatsV4(t,isRmt){
+  const items=[
+    ["总人数 / Jumlah Murid",t.total],
+    ["出席 / Hadir",t.present],
+    ["迟到 / Lewat",t.late],
+    ["缺席 / Tidak Hadir",t.absent],
+    ["尚未点名 / Belum Direkodkan",t.unrecorded]
+  ];
+  if(!isRmt)items.splice(4,0,["校外活动 / Aktiviti Luar Sekolah",t.activity]);
+  return '<div class="summary">'+items.map(([label,value])=>'<div class="summary-box">'+escapeHtml(label)+'<div class="summary-number">'+dashNumberV4(value)+'</div></div>').join('')+'</div>'+
+    '<div class="date-box"><strong>'+(isRmt?'RMT 出席 / Kehadiran RMT':'每日出席百分比 / Peratus Kehadiran Harian')+': '+dashPctV4(t.percentage)+'</strong></div>';
+}
+function dashTableV4(heads,rows){
+  return '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>'+heads.map(h=>'<th style="padding:9px 6px;text-align:left;border-bottom:2px solid #ddd">'+escapeHtml(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(c=>'<td style="padding:9px 6px;border-bottom:1px solid #eee">'+escapeHtml(String(c))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+}
+function dashStudentTableV4(students){
+  if(!students.length)return '<p>没有学生 / Tiada murid.</p>';
+  return dashTableV4(["班级 / Kelas","学生姓名 / Nama Murid"],students.map(s=>[s.classID,[s.FullNameC,s.FullName].filter(Boolean).join(' / ')]));
+}
+async function loadDailyDashboardV4(){
+  const msg=document.getElementById("dashboardMessage");
+  const date=document.getElementById("dashboardDate").value;
+  if(!date||!currentTeacher)return;
+  msg.textContent="正在加载 / Sedang memuatkan...";
+  try{
+    const url=API_URL+'?action=dailyDashboard&teacherID='+encodeURIComponent(currentTeacher.TeacherID)+'&selectedDate='+encodeURIComponent(date);
+    const response=await fetch(url,{cache:"no-store"});
+    const data=await response.json();
+    if(!data.success)throw new Error(data.message||"Gagal memuatkan laporan");
+    const schoolVisible=!!data.school;
+    document.getElementById("schoolDashboardV4").classList.toggle("hidden",!schoolVisible);
+    if(schoolVisible){
+      document.getElementById("schoolTotalsV4").innerHTML=dashStatsV4(data.school,false);
+      document.getElementById("classRowsV4").innerHTML=dashTableV4(
+        ["班级 / Kelas","出席 / Hadir","迟到 / Lewat","缺席 / Tidak Hadir","校外活动 / Aktiviti Luar","未点名 / Belum Direkodkan","百分比 / Peratus"],
+        data.classes.map(c=>[c.classID,c.present,c.late,c.absent,c.activity,c.unrecorded,dashPctV4(c.percentage)]));
+      document.getElementById("incompleteClassesV4").innerHTML=data.incompleteClasses.length?
+        dashTableV4(["班级 / Kelas","已点名 / Direkodkan","未点名 / Belum Direkodkan"],data.incompleteClasses.map(c=>[c.classID,c.total-c.unrecorded,c.unrecorded])):
+        '<p>所有班级已完成点名 / Semua kelas telah selesai merekod kehadiran.</p>';
+    }
+    document.getElementById("rmtTotalsV4").innerHTML=dashStatsV4(data.rmt,true)+
+      '<p style="font-size:13px;color:#6b7280">RMT 校外活动学生计入 RMT 缺席；尚未点名独立统计。 / Murid aktiviti luar dikira tidak hadir RMT; belum direkodkan diasingkan.</p>';
+    document.getElementById("rmtAbsentV4").innerHTML=dashStudentTableV4(data.rmtAbsentStudents);
+    document.getElementById("rmtUnrecordedV4").innerHTML=dashStudentTableV4(data.rmtUnrecordedStudents);
+    msg.textContent="更新完成 / Dikemas kini: "+data.date;
+  }catch(err){msg.textContent="❌ "+err.message+"。请确认 Code.gs 已更新并重新部署 / Sila kemas kini dan deploy Code.gs.";}
 }
 
 </script>
