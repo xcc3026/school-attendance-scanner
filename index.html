@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html lang="zh-CN">
@@ -352,6 +353,14 @@
     #studentList .student-name-en { font-size: 13px; }
     #studentList .student-detail { font-size: 12px; }
     #studentList .status { margin-top: 7px; padding: 5px 8px; font-size: 12px; }
+
+    .compact-batch-actions { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+    .compact-batch-actions select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: white; }
+    .compact-batch-actions button { width: 100%; }
+    .compact-selection-actions { margin: 8px 0 16px; }
+    .compact-selection-actions button { width: 100%; }
+    #studentList .student-select-row { align-items: center; }
+    #studentList .student-checkbox { margin-top: 0; }
 
     .student-card {
 
@@ -1210,11 +1219,11 @@
           onclick="selectAllUnrecorded()"
         >
 
-          ☑️ 全选尚未记录
+          ☑️ 全选
 
           <br>
 
-          Pilih Semua Belum Direkodkan
+          Pilih Semua
 
         </button>
 
@@ -1231,70 +1240,19 @@
           0 murid dipilih
 
         </div>
-<div class="bulk-action-label">统一设置已勾选学生的出席状态 / Tetapkan status murid dipilih</div>
-<div
-  class="student-actions"
-  id="batchActions"
->
-
-  <button
-    class="present-button"
-    onclick="batchSetAttendance('出席 Hadir')"
-  >
-    🟢 批量出席
-    <br>
-    Hadir
-  </button>
-
-  <button
-    class="late-button"
-    onclick="batchSetAttendance('迟到 Lewat')"
-  >
-    🟡 批量迟到
-    <br>
-    Lewat
-  </button>
-
-  <button
-    class="absent-button"
-    onclick="batchSetAttendance('缺席 Tidak Hadir')"
-  >
-    🔴 批量缺席
-    <br>
-    Tidak Hadir
-  </button>
-
-  <button
-    class="activity-button"
-    onclick="batchSetAttendance('校外活动 Aktiviti Luar Sekolah')"
-  >
-    🔵 批量校外活动
-    <br>
-    Aktiviti Luar Sekolah
-  </button>
-
+<div class="bulk-action-label">统一选择出席状态 / Pilih Status Kehadiran</div>
+<div id="batchActions" class="compact-batch-actions">
+  <select id="batchStatus" aria-label="出席状态 Status Kehadiran">
+    <option value="出席 Hadir">出席 Hadir</option>
+    <option value="迟到 Lewat">迟到 Lewat</option>
+    <option value="缺席 Tidak Hadir">缺席 Tidak Hadir</option>
+    <option value="校外活动 Aktiviti Luar Sekolah">校外活动 Aktiviti Luar Sekolah</option>
+  </select>
+  <button class="primary-button" onclick="submitSelectedAttendance()">确认批量提交 / Hantar Rekod</button>
 </div>
-
-
-<button
-  class="secondary-button"
-  onclick="selectAllVisible()"
->
-  ☑️ 全选当前显示
-  <br>
-  Pilih Semua Yang Dipaparkan
-</button>
-
-
-<button
-  class="secondary-button"
-  onclick="clearSelection()"
->
-  ✖️ 清除选择
-  <br>
-  Kosongkan Pilihan
-</button>
-
+<div class="compact-selection-actions">
+  <button class="secondary-button" onclick="clearSelection()">取消全选 / Nyahpilih Semua</button>
+</div>
 
 <div
   id="batchMessage"
@@ -2600,7 +2558,8 @@ function selectAllUnrecorded() {
 
 
       if (
-        status === "Unrecorded"
+        status === "Unrecorded" &&
+        canEditStudent(student)
       ) {
 
         const studentID =
@@ -3365,31 +3324,16 @@ function createStudentCard(
 
         </div>
 
-        <div class="student-name-en">
-
-          ${escapeHtml(name)}
-
-        </div>
-
-        <div class="student-detail">
-
-          ID：${escapeHtml(studentID)}
-
-        </div>
-
       </div>
 
     </div>` +
 
 
-    `<div class="status ${getStatusClass(status)}">
-
-      ${getStatusText(status)}
-
-    </div>`;
+    (status === "Unrecorded" ? "" :
+      `<div class="status ${getStatusClass(status)}">${getStatusText(status)}</div>`);
 
 
-  // 简洁名单：每位学生只显示勾选框、姓名和状态。
+  // 尚未点名：只显示勾选框与姓名；已点名：显示状态供核对。
   // 修改已登记记录：使用上方筛选查看学生，再勾选并使用统一批量操作。
 
   return card;
@@ -3609,6 +3553,12 @@ async function setAttendance(
  * 批量登记 / 修改出席
  * =========================================================
  */
+
+function submitSelectedAttendance() {
+  const selector = document.getElementById("batchStatus");
+  if (!selector) return;
+  batchSetAttendance(selector.value);
+}
 
 async function batchSetAttendance(
   status
@@ -3944,6 +3894,15 @@ function normalizeDisplayStatus(
 
     return "Unrecorded";
 
+  }
+
+
+  if (
+    value.includes("尚未") ||
+    value.includes("belum") ||
+    value === "unrecorded"
+  ) {
+    return "Unrecorded";
   }
 
 
